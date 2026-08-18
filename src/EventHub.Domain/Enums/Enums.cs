@@ -32,3 +32,10 @@ public enum PaymentStatus
     Failed = 3,
     Refunded = 4
 }
+
+public enum WalletTransactionType
+{
+    Purchase = 1,
+    Refund = 2,
+    Deposit = 3
+}

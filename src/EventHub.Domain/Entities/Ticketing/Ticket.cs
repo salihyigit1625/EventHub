@@ -14,6 +14,7 @@ public class Ticket : BaseEntity
     public virtual User Attendee { get; set; } = null!;
 
     public string UniqueCode { get; set; } = string.Empty;
+    public decimal UnitPrice { get; set; }
     public TicketStatus Status { get; set; } = TicketStatus.Reserved;
     public DateTime? PurchasedAt { get; set; }
     public DateTime? CheckedInAt { get; set; }
