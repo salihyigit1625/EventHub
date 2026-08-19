@@ -218,3 +218,9 @@
 /Users/yigit/RiderProjects/EventHub/src/EventHub.Api/obj/Debug/net10.0/EventHub.Api.pdb
 /Users/yigit/RiderProjects/EventHub/src/EventHub.Api/obj/Debug/net10.0/EventHub.Api.genruntimeconfig.cache
 /Users/yigit/RiderProjects/EventHub/src/EventHub.Api/obj/Debug/net10.0/ref/EventHub.Api.dll
+/Users/yigit/RiderProjects/EventHub/src/EventHub.Api/bin/Debug/net10.0/AutoMapper.dll
+/Users/yigit/RiderProjects/EventHub/src/EventHub.Api/bin/Debug/net10.0/FluentValidation.dll
+/Users/yigit/RiderProjects/EventHub/src/EventHub.Api/bin/Debug/net10.0/FluentValidation.DependencyInjectionExtensions.dll
+/Users/yigit/RiderProjects/EventHub/src/EventHub.Api/bin/Debug/net10.0/Microsoft.AspNetCore.Authentication.JwtBearer.dll
+/Users/yigit/RiderProjects/EventHub/src/EventHub.Api/bin/Debug/net10.0/Infrastructure.dll
+/Users/yigit/RiderProjects/EventHub/src/EventHub.Api/bin/Debug/net10.0/Infrastructure.pdb
