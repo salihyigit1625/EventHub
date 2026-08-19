@@ -1,4 +1,6 @@
 using EventHub.Api.Authorization;
+using EventHub.Api.Extensions;
+using EventHub.Api.Filters;
 using EventHub.Api.Middleware;
 using EventHub.Application;
 using EventHub.Repository;
@@ -9,8 +11,9 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
-builder.Services.AddOpenApi();
+builder.Services.AddControllers(options => options.Filters.Add<ValidationFilter>());
+builder.Services.AddScoped<ValidationFilter>();
+builder.Services.AddEventHubSwagger();
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
@@ -31,13 +34,13 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.UseMiddleware<ExceptionHandlingMiddleware>();
+app.UseEventHubSwagger();
 
-if (app.Environment.IsDevelopment())
+if (!app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.UseHttpsRedirection();
 }
 
-app.UseHttpsRedirection();
 app.UseCors("AllowAll");
 app.UseAuthentication();
 app.UseAuthorization();

@@ -9,13 +9,23 @@ namespace EventHub.Api.Controllers;
 [Route("api/auth")]
 public class AuthController(IAuthService authService) : ControllerBase
 {
-    [HttpPost("register")]
+    [HttpPost("register/attendee")]
     [AllowAnonymous]
-    public async Task<ActionResult<AuthResponseDto>> Register(
-        [FromBody] RegisterDto dto,
+    public async Task<ActionResult<AuthResponseDto>> RegisterAttendee(
+        [FromBody] RegisterAttendeeDto dto,
         CancellationToken cancellationToken)
     {
-        var result = await authService.RegisterAsync(dto, cancellationToken);
+        var result = await authService.RegisterAttendeeAsync(dto, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpPost("register/organizer")]
+    [AllowAnonymous]
+    public async Task<ActionResult<AuthResponseDto>> RegisterOrganizer(
+        [FromBody] RegisterOrganizerDto dto,
+        CancellationToken cancellationToken)
+    {
+        var result = await authService.RegisterOrganizerAsync(dto, cancellationToken);
         return Ok(result);
     }
 

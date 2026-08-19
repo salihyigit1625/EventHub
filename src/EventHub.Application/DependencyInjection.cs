@@ -21,7 +21,7 @@ public static class DependencyInjection
     {
         services.AddAutoMapper(cfg => cfg.AddProfile<MappingProfile>());
 
-        services.AddValidatorsFromAssemblyContaining<RegisterDtoValidator>();
+        services.AddValidatorsFromAssemblyContaining<RegisterAttendeeDtoValidator>();
 
         services.AddScoped<IPermissionService, PermissionService>();
         services.AddScoped<IAuthService, AuthService>();

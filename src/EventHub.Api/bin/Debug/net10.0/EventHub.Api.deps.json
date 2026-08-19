@@ -9,8 +9,8 @@
       "EventHub.Api/1.0.0": {
         "dependencies": {
           "EventHub.Application": "1.0.0",
+          "EventHub.Infrastructure": "1.0.0",
           "EventHub.Repository": "1.0.0",
-          "Infrastructure": "1.0.0",
           "Microsoft.AspNetCore.OpenApi": "10.0.9",
           "Microsoft.EntityFrameworkCore.Design": "10.0.0"
         },
@@ -941,6 +941,18 @@
           }
         }
       },
+      "EventHub.Infrastructure/1.0.0": {
+        "dependencies": {
+          "EventHub.Application": "1.0.0",
+          "Microsoft.AspNetCore.Authentication.JwtBearer": "10.0.9"
+        },
+        "runtime": {
+          "EventHub.Infrastructure.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      },
       "EventHub.Repository/1.0.0": {
         "dependencies": {
           "EventHub.Application": "1.0.0",
@@ -950,18 +962,6 @@
         },
         "runtime": {
           "EventHub.Repository.dll": {
-            "assemblyVersion": "1.0.0.0",
-            "fileVersion": "1.0.0.0"
-          }
-        }
-      },
-      "Infrastructure/1.0.0": {
-        "dependencies": {
-          "EventHub.Application": "1.0.0",
-          "Microsoft.AspNetCore.Authentication.JwtBearer": "10.0.9"
-        },
-        "runtime": {
-          "Infrastructure.dll": {
             "assemblyVersion": "1.0.0.0",
             "fileVersion": "1.0.0.0"
           }
@@ -1384,12 +1384,12 @@
       "serviceable": false,
       "sha512": ""
     },
-    "EventHub.Repository/1.0.0": {
+    "EventHub.Infrastructure/1.0.0": {
       "type": "project",
       "serviceable": false,
       "sha512": ""
     },
-    "Infrastructure/1.0.0": {
+    "EventHub.Repository/1.0.0": {
       "type": "project",
       "serviceable": false,
       "sha512": ""

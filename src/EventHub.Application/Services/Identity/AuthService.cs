@@ -24,35 +24,35 @@ public class AuthService(
 {
     private readonly PasswordHasher<User> _passwordHasher = new();
 
-    public async Task<AuthResponseDto> RegisterAsync(RegisterDto dto, CancellationToken cancellationToken = default)
+    public async Task<AuthResponseDto> RegisterAttendeeAsync(
+        RegisterAttendeeDto dto,
+        CancellationToken cancellationToken = default)
     {
-        var email = dto.Email.Trim().ToLowerInvariant();
-
-        if (await userRepository.AnyAsync(u => u.Email == email, cancellationToken))
-            throw new InvalidOperationException("A user with this email already exists.");
-
-        var role = await roleRepository.FirstOrDefaultAsync(r => r.Name == dto.Role, cancellationToken)
-            ?? throw new KeyNotFoundException($"Role '{dto.Role}' was not found.");
-
-        var user = new User
-        {
-            Email = email,
-            FullName = dto.FullName.Trim(),
-            IsActive = true,
-            PasswordHash = _passwordHasher.HashPassword(null!, dto.Password)
-        };
-
-        user.UserRoles.Add(new UserRole { RoleId = role.Id });
-
-        if (dto.Role == AppRoles.Attendee)
-            user.AttendeeProfile = new AttendeeProfile();
-        else if (dto.Role == AppRoles.Organizer)
-            user.OrganizerProfile = new OrganizerProfile { CompanyName = dto.FullName.Trim() };
+        var user = await CreateUserAsync(dto.Email, dto.FullName, dto.Password, AppRoles.Attendee, cancellationToken);
+        user.AttendeeProfile = new AttendeeProfile();
 
         await userRepository.AddAsync(user, cancellationToken);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
-        return await GenerateTokensAsync(user, [role.Name], cancellationToken);
+        return await GenerateTokensAsync(user, [AppRoles.Attendee], cancellationToken);
+    }
+
+    public async Task<AuthResponseDto> RegisterOrganizerAsync(
+        RegisterOrganizerDto dto,
+        CancellationToken cancellationToken = default)
+    {
+        var user = await CreateUserAsync(dto.Email, dto.FullName, dto.Password, AppRoles.Organizer, cancellationToken);
+        user.OrganizerProfile = new OrganizerProfile
+        {
+            CompanyName = dto.CompanyName.Trim(),
+            TaxNumber = string.IsNullOrWhiteSpace(dto.TaxNumber) ? null : dto.TaxNumber.Trim(),
+            IsApproved = false
+        };
+
+        await userRepository.AddAsync(user, cancellationToken);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return await GenerateTokensAsync(user, [AppRoles.Organizer], cancellationToken);
     }
 
     public async Task<AuthResponseDto> LoginAsync(LoginDto dto, CancellationToken cancellationToken = default)
@@ -142,5 +142,32 @@ public class AuthService(
         var roleIds = userRoles.Select(ur => ur.RoleId).ToHashSet();
         var roles = await roleRepository.GetAllAsync(cancellationToken);
         return roles.Where(r => roleIds.Contains(r.Id)).Select(r => r.Name).ToList();
+    }
+
+    private async Task<User> CreateUserAsync(
+        string email,
+        string fullName,
+        string password,
+        string roleName,
+        CancellationToken cancellationToken)
+    {
+        var normalizedEmail = email.Trim().ToLowerInvariant();
+
+        if (await userRepository.AnyAsync(u => u.Email == normalizedEmail, cancellationToken))
+            throw new InvalidOperationException("A user with this email already exists.");
+
+        var role = await roleRepository.FirstOrDefaultAsync(r => r.Name == roleName, cancellationToken)
+            ?? throw new KeyNotFoundException($"Role '{roleName}' was not found.");
+
+        var user = new User
+        {
+            Email = normalizedEmail,
+            FullName = fullName.Trim(),
+            IsActive = true,
+            PasswordHash = _passwordHasher.HashPassword(null!, password)
+        };
+
+        user.UserRoles.Add(new UserRole { RoleId = role.Id });
+        return user;
     }
 }

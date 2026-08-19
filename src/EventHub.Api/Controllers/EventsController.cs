@@ -78,6 +78,7 @@ public class EventsController(IEventService eventService) : ControllerBase
     }
 
     [HttpPost("{id:int}/poster")]
+    [Consumes("multipart/form-data")]
     [Authorize(Roles = AppRoles.Organizer)]
     [HasPermission(AppPermissions.EventsPosterUpload)]
     public async Task<ActionResult<EventDto>> UploadPoster(

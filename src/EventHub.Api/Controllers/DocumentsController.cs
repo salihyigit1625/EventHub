@@ -15,6 +15,7 @@ public class DocumentsController(
     IFileStorageService fileStorage) : ControllerBase
 {
     [HttpPost]
+    [Consumes("multipart/form-data")]
     [Authorize(Roles = $"{AppRoles.Organizer},{AppRoles.Admin}")]
     [HasPermission(AppPermissions.DocumentsUpload)]
     public async Task<ActionResult<DocumentDto>> Upload(IFormFile file, CancellationToken cancellationToken)

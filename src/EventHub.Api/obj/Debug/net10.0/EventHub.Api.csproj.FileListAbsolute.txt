@@ -222,5 +222,5 @@
 /Users/yigit/RiderProjects/EventHub/src/EventHub.Api/bin/Debug/net10.0/FluentValidation.dll
 /Users/yigit/RiderProjects/EventHub/src/EventHub.Api/bin/Debug/net10.0/FluentValidation.DependencyInjectionExtensions.dll
 /Users/yigit/RiderProjects/EventHub/src/EventHub.Api/bin/Debug/net10.0/Microsoft.AspNetCore.Authentication.JwtBearer.dll
-/Users/yigit/RiderProjects/EventHub/src/EventHub.Api/bin/Debug/net10.0/Infrastructure.dll
-/Users/yigit/RiderProjects/EventHub/src/EventHub.Api/bin/Debug/net10.0/Infrastructure.pdb
+/Users/yigit/RiderProjects/EventHub/src/EventHub.Api/bin/Debug/net10.0/EventHub.Infrastructure.dll
+/Users/yigit/RiderProjects/EventHub/src/EventHub.Api/bin/Debug/net10.0/EventHub.Infrastructure.pdb
