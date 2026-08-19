@@ -33,10 +33,11 @@ public class WalletController(IWalletService walletService) : ControllerBase
 
     [HttpGet("transactions")]
     [HasPermission(AppPermissions.WalletView)]
-    public async Task<ActionResult<IReadOnlyList<WalletTransactionDto>>> GetTransactions(
+    public async Task<ActionResult<PagedResult<WalletTransactionDto>>> GetTransactions(
+        [FromQuery] PagingQuery query,
         CancellationToken cancellationToken)
     {
-        var result = await walletService.GetTransactionsAsync(cancellationToken);
+        var result = await walletService.GetTransactionsAsync(query, cancellationToken);
         return Ok(result);
     }
 }

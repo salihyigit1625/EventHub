@@ -17,6 +17,7 @@ public static class AppPermissions
 
     public const string WaitlistJoin = "waitlist.join";
     public const string WaitlistConvert = "waitlist.convert";
+    public const string WaitlistNotify = "waitlist.notify";
 
     public const string WalletView = "wallet.view";
     public const string WalletDeposit = "wallet.deposit";
@@ -47,6 +48,7 @@ public static class AppPermissions
         TicketsCheckIn,
         WaitlistJoin,
         WaitlistConvert,
+        WaitlistNotify,
         WalletView,
         WalletDeposit,
         PaymentsView,

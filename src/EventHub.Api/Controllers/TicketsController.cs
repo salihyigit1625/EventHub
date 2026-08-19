@@ -32,9 +32,11 @@ public class TicketsController(ITicketService ticketService) : ControllerBase
     [HttpGet("mine")]
     [Authorize(Roles = AppRoles.Attendee)]
     [HasPermission(AppPermissions.TicketsView)]
-    public async Task<ActionResult<IReadOnlyList<TicketDto>>> GetMine(CancellationToken cancellationToken)
+    public async Task<ActionResult<PagedResult<TicketDto>>> GetMine(
+        [FromQuery] TicketListQuery query,
+        CancellationToken cancellationToken)
     {
-        var result = await ticketService.GetMyTicketsAsync(cancellationToken);
+        var result = await ticketService.GetMyTicketsAsync(query, cancellationToken);
         return Ok(result);
     }
 

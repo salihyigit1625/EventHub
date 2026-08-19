@@ -110,7 +110,8 @@ public class AdminService(
         };
     }
 
-    public async Task<IReadOnlyList<OrganizerProfileDto>> GetPendingApprovalsAsync(
+    public async Task<PagedResult<OrganizerProfileDto>> GetPendingApprovalsAsync(
+        PagingQuery query,
         CancellationToken cancellationToken = default)
     {
         var profiles = await organizerRepository.FindAsync(p => !p.IsApproved, cancellationToken);
@@ -134,7 +135,13 @@ public class AdminService(
             });
         }
 
-        return result;
+        return new PagedResult<OrganizerProfileDto>
+        {
+            Items = result.Skip(query.Skip).Take(query.Take).ToList(),
+            Page = Math.Max(query.Page, 1),
+            PageSize = query.Take,
+            TotalCount = result.Count
+        };
     }
 
     public async Task<GlobalStatsDto> GetGlobalStatsAsync(CancellationToken cancellationToken = default)

@@ -15,10 +15,11 @@ public class AdminController(IAdminService adminService) : ControllerBase
 {
     [HttpGet("organizers/pending")]
     [HasPermission(AppPermissions.AdminApprove)]
-    public async Task<ActionResult<IReadOnlyList<OrganizerProfileDto>>> GetPendingApprovals(
+    public async Task<ActionResult<PagedResult<OrganizerProfileDto>>> GetPendingApprovals(
+        [FromQuery] PagingQuery query,
         CancellationToken cancellationToken)
     {
-        var result = await adminService.GetPendingApprovalsAsync(cancellationToken);
+        var result = await adminService.GetPendingApprovalsAsync(query, cancellationToken);
         return Ok(result);
     }
 

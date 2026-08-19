@@ -1,4 +1,5 @@
 using AutoMapper;
+using EventHub.Application.Common;
 using EventHub.Application.DTOs.Ticketing;
 using EventHub.Application.Interfaces.Persistence;
 using EventHub.Application.Interfaces.Identity;
@@ -70,8 +71,8 @@ public class WaitlistService(
         var entry = await waitlistRepository.GetByIdAsync(waitlistId, cancellationToken)
             ?? throw new KeyNotFoundException($"Waitlist ({waitlistId}) was not found.");
 
-        if (entry.Status is not (WaitlistStatus.Waiting or WaitlistStatus.Notified))
-            throw new InvalidOperationException("This waitlist entry cannot be converted.");
+        if (entry.Status != WaitlistStatus.Notified)
+            throw new InvalidOperationException("Only notified waitlist entries can be converted.");
 
         if (entry.ExpiresAt is not null && entry.ExpiresAt < DateTime.UtcNow)
         {
@@ -142,12 +143,59 @@ public class WaitlistService(
         return mapper.Map<TicketDto>(ticket);
     }
 
-    public async Task<IReadOnlyList<WaitlistDto>> GetMyWaitlistAsync(CancellationToken cancellationToken = default)
+    public async Task<WaitlistDto> NotifyNextAsync(int ticketTypeId, CancellationToken cancellationToken = default)
+    {
+        var ticketType = await ticketTypeRepository.GetByIdAsync(ticketTypeId, cancellationToken)
+            ?? throw new KeyNotFoundException($"TicketType ({ticketTypeId}) was not found.");
+
+        if (ticketType.RemainingQuantity <= 0)
+            throw new InvalidOperationException("There are no available tickets to offer.");
+
+        var entries = await waitlistRepository.FindAsync(w => w.TicketTypeId == ticketTypeId, cancellationToken);
+        var now = DateTime.UtcNow;
+
+        foreach (var expired in entries.Where(e => e.Status == WaitlistStatus.Notified && e.ExpiresAt < now))
+        {
+            expired.Status = WaitlistStatus.Expired;
+            waitlistRepository.Update(expired);
+        }
+
+        if (entries.Any(e => e.Status == WaitlistStatus.Notified && (e.ExpiresAt is null || e.ExpiresAt >= now)))
+            throw new InvalidOperationException("Another attendee already has an active waitlist offer.");
+
+        var next = entries
+            .Where(e => e.Status == WaitlistStatus.Waiting)
+            .OrderBy(e => e.RequestedAt)
+            .FirstOrDefault()
+            ?? throw new InvalidOperationException("There is nobody waiting for this ticket type.");
+
+        next.Status = WaitlistStatus.Notified;
+        next.NotifiedAt = now;
+        next.ExpiresAt = now.AddMinutes(30);
+        waitlistRepository.Update(next);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return mapper.Map<WaitlistDto>(next);
+    }
+
+    public async Task<PagedResult<WaitlistDto>> GetMyWaitlistAsync(
+        WaitlistListQuery query,
+        CancellationToken cancellationToken = default)
     {
         var attendeeId = currentUser.UserId
             ?? throw new UnauthorizedAccessException("Authentication is required.");
 
         var entries = await waitlistRepository.FindAsync(w => w.AttendeeId == attendeeId, cancellationToken);
-        return entries.OrderByDescending(w => w.RequestedAt).Select(e => mapper.Map<WaitlistDto>(e)).ToList();
+        if (query.Status is { } status)
+            entries = entries.Where(e => e.Status == status).ToList();
+
+        var ordered = entries.OrderByDescending(w => w.RequestedAt).ToList();
+        return new PagedResult<WaitlistDto>
+        {
+            Items = ordered.Skip(query.Skip).Take(query.Take).Select(e => mapper.Map<WaitlistDto>(e)).ToList(),
+            Page = Math.Max(query.Page, 1),
+            PageSize = query.Take,
+            TotalCount = ordered.Count
+        };
     }
 }

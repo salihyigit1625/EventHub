@@ -12,7 +12,10 @@ public static class DbSeeder
     public static async Task SeedAsync(AppDbContext db, CancellationToken cancellationToken = default)
     {
         if (await db.Roles.AnyAsync(cancellationToken))
+        {
+            await EnsureMissingPermissionsAsync(db, cancellationToken);
             return;
+        }
 
         var adminRole = new Role { Name = AppRoles.Admin, Description = "System administrator" };
         var organizerRole = new Role { Name = AppRoles.Organizer, Description = "Event organizer" };
@@ -42,7 +45,8 @@ public static class DbSeeder
             AppPermissions.DocumentsUpload,
             AppPermissions.DocumentsDownload,
             AppPermissions.OrganizersView,
-            AppPermissions.OrganizersUpdate);
+            AppPermissions.OrganizersUpdate,
+            AppPermissions.WaitlistNotify);
         Grant(attendeeRole,
             AppPermissions.TicketsPurchase,
             AppPermissions.TicketsCancel,
@@ -111,5 +115,31 @@ public static class DbSeeder
         };
         user.PasswordHash = hasher.HashPassword(user, password);
         return user;
+    }
+
+    private static async Task EnsureMissingPermissionsAsync(AppDbContext db, CancellationToken cancellationToken)
+    {
+        var existingCodes = await db.Permissions.Select(p => p.Code).ToListAsync(cancellationToken);
+        var missingCodes = AppPermissions.All.Except(existingCodes).ToList();
+        if (missingCodes.Count == 0)
+            return;
+
+        var permissions = missingCodes.Select(code => new Permission { Code = code, Description = code }).ToList();
+        db.Permissions.AddRange(permissions);
+        await db.SaveChangesAsync(cancellationToken);
+
+        var organizerRole = await db.Roles.FirstOrDefaultAsync(r => r.Name == AppRoles.Organizer, cancellationToken);
+        var adminRole = await db.Roles.FirstOrDefaultAsync(r => r.Name == AppRoles.Admin, cancellationToken);
+        if (organizerRole is null || adminRole is null)
+            return;
+
+        foreach (var permission in permissions)
+        {
+            db.RolePermissions.Add(new RolePermission { RoleId = adminRole.Id, PermissionId = permission.Id });
+            if (permission.Code == AppPermissions.WaitlistNotify)
+                db.RolePermissions.Add(new RolePermission { RoleId = organizerRole.Id, PermissionId = permission.Id });
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
     }
 }

@@ -89,6 +89,20 @@ public class AuthService(
         return await GenerateTokensAsync(user, roles, cancellationToken);
     }
 
+    public async Task LogoutAsync(CancellationToken cancellationToken = default)
+    {
+        var userId = currentUser.UserId
+            ?? throw new UnauthorizedAccessException("Authentication is required.");
+
+        var user = await userRepository.GetByIdAsync(userId, cancellationToken)
+            ?? throw new KeyNotFoundException($"User ({userId}) was not found.");
+
+        user.RefreshToken = null;
+        user.RefreshTokenExpiryTime = null;
+        userRepository.Update(user);
+        await unitOfWork.SaveChangesAsync(cancellationToken);
+    }
+
     public async Task<CurrentUserDto> GetCurrentUserAsync(CancellationToken cancellationToken = default)
     {
         var userId = currentUser.UserId

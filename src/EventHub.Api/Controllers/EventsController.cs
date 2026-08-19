@@ -13,9 +13,11 @@ public class EventsController(IEventService eventService) : ControllerBase
 {
     [HttpGet]
     [AllowAnonymous]
-    public async Task<ActionResult<IReadOnlyList<EventListItemDto>>> GetPublished(CancellationToken cancellationToken)
+    public async Task<ActionResult<PagedResult<EventListItemDto>>> GetPublished(
+        [FromQuery] EventListQuery query,
+        CancellationToken cancellationToken)
     {
-        var result = await eventService.GetPublishedAsync(cancellationToken);
+        var result = await eventService.GetPublishedAsync(query, cancellationToken);
         return Ok(result);
     }
 
@@ -30,9 +32,11 @@ public class EventsController(IEventService eventService) : ControllerBase
     [HttpGet("mine")]
     [Authorize(Roles = AppRoles.Organizer)]
     [HasPermission(AppPermissions.EventsCreate)]
-    public async Task<ActionResult<IReadOnlyList<EventListItemDto>>> GetMine(CancellationToken cancellationToken)
+    public async Task<ActionResult<PagedResult<EventListItemDto>>> GetMine(
+        [FromQuery] EventListQuery query,
+        CancellationToken cancellationToken)
     {
-        var result = await eventService.GetMyEventsAsync(cancellationToken);
+        var result = await eventService.GetMyEventsAsync(query, cancellationToken);
         return Ok(result);
     }
 

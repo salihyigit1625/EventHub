@@ -1,4 +1,5 @@
 using AutoMapper;
+using EventHub.Application.Common;
 using EventHub.Application.DTOs.Ticketing;
 using EventHub.Application.Interfaces.Persistence;
 using EventHub.Application.Interfaces.Identity;
@@ -149,13 +150,25 @@ public class TicketService(
         return mapper.Map<TicketDto>(ticket);
     }
 
-    public async Task<IReadOnlyList<TicketDto>> GetMyTicketsAsync(CancellationToken cancellationToken = default)
+    public async Task<PagedResult<TicketDto>> GetMyTicketsAsync(
+        TicketListQuery query,
+        CancellationToken cancellationToken = default)
     {
         var attendeeId = currentUser.UserId
             ?? throw new UnauthorizedAccessException("Authentication is required.");
 
         var tickets = await ticketRepository.FindAsync(t => t.AttendeeId == attendeeId, cancellationToken);
-        return tickets.OrderByDescending(t => t.CreatedAt).Select(t => mapper.Map<TicketDto>(t)).ToList();
+        if (query.Status is { } status)
+            tickets = tickets.Where(t => t.Status == status).ToList();
+
+        var ordered = tickets.OrderByDescending(t => t.CreatedAt).ToList();
+        return new PagedResult<TicketDto>
+        {
+            Items = ordered.Skip(query.Skip).Take(query.Take).Select(t => mapper.Map<TicketDto>(t)).ToList(),
+            Page = Math.Max(query.Page, 1),
+            PageSize = query.Take,
+            TotalCount = ordered.Count
+        };
     }
 
     public async Task<TicketDto> GetByCodeAsync(string uniqueCode, CancellationToken cancellationToken = default)

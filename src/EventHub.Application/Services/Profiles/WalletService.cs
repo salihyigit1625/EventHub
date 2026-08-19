@@ -1,4 +1,5 @@
 using AutoMapper;
+using EventHub.Application.Common;
 using EventHub.Application.DTOs.Profiles;
 using EventHub.Application.DTOs.Ticketing;
 using EventHub.Application.Interfaces.Persistence;
@@ -59,7 +60,8 @@ public class WalletService(
         return new WalletBalanceDto { AttendeeId = attendeeId, Balance = attendee.WalletBalance };
     }
 
-    public async Task<IReadOnlyList<WalletTransactionDto>> GetTransactionsAsync(
+    public async Task<PagedResult<WalletTransactionDto>> GetTransactionsAsync(
+        PagingQuery query,
         CancellationToken cancellationToken = default)
     {
         var attendeeId = currentUser.UserId
@@ -69,9 +71,13 @@ public class WalletService(
             t => t.AttendeeId == attendeeId,
             cancellationToken);
 
-        return transactions
-            .OrderByDescending(t => t.CreatedAt)
-            .Select(t => mapper.Map<WalletTransactionDto>(t))
-            .ToList();
+        var ordered = transactions.OrderByDescending(t => t.CreatedAt).ToList();
+        return new PagedResult<WalletTransactionDto>
+        {
+            Items = ordered.Skip(query.Skip).Take(query.Take).Select(t => mapper.Map<WalletTransactionDto>(t)).ToList(),
+            Page = Math.Max(query.Page, 1),
+            PageSize = query.Take,
+            TotalCount = ordered.Count
+        };
     }
 }

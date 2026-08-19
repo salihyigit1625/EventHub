@@ -55,7 +55,6 @@
 /Users/yigit/RiderProjects/EventHub/src/EventHub.Api/bin/Debug/net10.0/Azure.Core.dll
 /Users/yigit/RiderProjects/EventHub/src/EventHub.Api/bin/Debug/net10.0/Azure.Identity.dll
 /Users/yigit/RiderProjects/EventHub/src/EventHub.Api/bin/Debug/net10.0/Humanizer.dll
-/Users/yigit/RiderProjects/EventHub/src/EventHub.Api/bin/Debug/net10.0/Microsoft.AspNetCore.OpenApi.dll
 /Users/yigit/RiderProjects/EventHub/src/EventHub.Api/bin/Debug/net10.0/Microsoft.Bcl.AsyncInterfaces.dll
 /Users/yigit/RiderProjects/EventHub/src/EventHub.Api/bin/Debug/net10.0/Microsoft.Bcl.Cryptography.dll
 /Users/yigit/RiderProjects/EventHub/src/EventHub.Api/bin/Debug/net10.0/Microsoft.Build.dll
@@ -224,3 +223,6 @@
 /Users/yigit/RiderProjects/EventHub/src/EventHub.Api/bin/Debug/net10.0/Microsoft.AspNetCore.Authentication.JwtBearer.dll
 /Users/yigit/RiderProjects/EventHub/src/EventHub.Api/bin/Debug/net10.0/EventHub.Infrastructure.dll
 /Users/yigit/RiderProjects/EventHub/src/EventHub.Api/bin/Debug/net10.0/EventHub.Infrastructure.pdb
+/Users/yigit/RiderProjects/EventHub/src/EventHub.Api/bin/Debug/net10.0/Swashbuckle.AspNetCore.Swagger.dll
+/Users/yigit/RiderProjects/EventHub/src/EventHub.Api/bin/Debug/net10.0/Swashbuckle.AspNetCore.SwaggerGen.dll
+/Users/yigit/RiderProjects/EventHub/src/EventHub.Api/bin/Debug/net10.0/Swashbuckle.AspNetCore.SwaggerUI.dll

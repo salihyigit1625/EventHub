@@ -1,4 +1,5 @@
 using AutoMapper;
+using EventHub.Application.Common;
 using EventHub.Application.DTOs.Events;
 using EventHub.Application.Interfaces.Persistence;
 using EventHub.Application.Interfaces.Identity;
@@ -185,19 +186,25 @@ public class EventService(
         return await BuildEventDtoAsync(entity, cancellationToken);
     }
 
-    public async Task<IReadOnlyList<EventListItemDto>> GetPublishedAsync(CancellationToken cancellationToken = default)
+    public async Task<PagedResult<EventListItemDto>> GetPublishedAsync(
+        EventListQuery query,
+        CancellationToken cancellationToken = default)
     {
         var events = await eventRepository.FindAsync(e => e.Status == EventStatus.Published, cancellationToken);
-        return events.OrderBy(e => e.StartDate).Select(e => mapper.Map<EventListItemDto>(e)).ToList();
+        var filtered = FilterEvents(events, query).OrderBy(e => e.StartDate).ToList();
+        return Page(filtered, query, e => mapper.Map<EventListItemDto>(e));
     }
 
-    public async Task<IReadOnlyList<EventListItemDto>> GetMyEventsAsync(CancellationToken cancellationToken = default)
+    public async Task<PagedResult<EventListItemDto>> GetMyEventsAsync(
+        EventListQuery query,
+        CancellationToken cancellationToken = default)
     {
         var organizerId = currentUser.UserId
             ?? throw new UnauthorizedAccessException("Authentication is required.");
 
         var events = await eventRepository.FindAsync(e => e.OrganizerId == organizerId, cancellationToken);
-        return events.OrderByDescending(e => e.CreatedAt).Select(e => mapper.Map<EventListItemDto>(e)).ToList();
+        var filtered = FilterEvents(events, query).OrderByDescending(e => e.CreatedAt).ToList();
+        return Page(filtered, query, e => mapper.Map<EventListItemDto>(e));
     }
 
     public async Task<(byte[] Content, string ContentType, string FileName)> GetPosterAsync(
@@ -223,6 +230,43 @@ public class EventService(
         var ticketTypes = await ticketTypeRepository.FindAsync(t => t.EventId == entity.Id, cancellationToken);
         dto.TicketTypes = ticketTypes.Select(t => mapper.Map<TicketTypeDto>(t)).ToList();
         return dto;
+    }
+
+    private static IEnumerable<Event> FilterEvents(IEnumerable<Event> events, EventListQuery query)
+    {
+        if (!string.IsNullOrWhiteSpace(query.Search))
+        {
+            var search = query.Search.Trim();
+            events = events.Where(e => e.Title.Contains(search, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (!string.IsNullOrWhiteSpace(query.Venue))
+        {
+            var venue = query.Venue.Trim();
+            events = events.Where(e => e.Venue.Contains(venue, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (query.From is { } from)
+            events = events.Where(e => e.StartDate >= from);
+
+        if (query.To is { } to)
+            events = events.Where(e => e.StartDate <= to);
+
+        if (query.Status is { } status)
+            events = events.Where(e => e.Status == status);
+
+        return events;
+    }
+
+    private static PagedResult<TOut> Page<T, TOut>(IReadOnlyList<T> items, PagingQuery query, Func<T, TOut> map)
+    {
+        return new PagedResult<TOut>
+        {
+            Items = items.Skip(query.Skip).Take(query.Take).Select(map).ToList(),
+            Page = Math.Max(query.Page, 1),
+            PageSize = query.Take,
+            TotalCount = items.Count
+        };
     }
 
     private static void ValidateFileExtension(string fileName)
