@@ -1581,6 +1581,20 @@
           "bin/placeholder/EventHub.Domain.dll": {}
         }
       },
+      "EventHub.Infrastructure/1.0.0": {
+        "type": "project",
+        "framework": ".NETCoreApp,Version=v10.0",
+        "dependencies": {
+          "EventHub.Application": "1.0.0",
+          "Microsoft.AspNetCore.Authentication.JwtBearer": "10.0.9"
+        },
+        "compile": {
+          "bin/placeholder/EventHub.Infrastructure.dll": {}
+        },
+        "runtime": {
+          "bin/placeholder/EventHub.Infrastructure.dll": {}
+        }
+      },
       "EventHub.Repository/1.0.0": {
         "type": "project",
         "framework": ".NETCoreApp,Version=v10.0",
@@ -1595,20 +1609,6 @@
         },
         "runtime": {
           "bin/placeholder/EventHub.Repository.dll": {}
-        }
-      },
-      "Infrastructure/1.0.0": {
-        "type": "project",
-        "framework": ".NETCoreApp,Version=v10.0",
-        "dependencies": {
-          "EventHub.Application": "1.0.0",
-          "Microsoft.AspNetCore.Authentication.JwtBearer": "10.0.9"
-        },
-        "compile": {
-          "bin/placeholder/Infrastructure.dll": {}
-        },
-        "runtime": {
-          "bin/placeholder/Infrastructure.dll": {}
         }
       }
     }
@@ -3976,22 +3976,22 @@
       "path": "../EventHub.Domain/EventHub.Domain.csproj",
       "msbuildProject": "../EventHub.Domain/EventHub.Domain.csproj"
     },
+    "EventHub.Infrastructure/1.0.0": {
+      "type": "project",
+      "path": "../EventHub.Infrastructure/EventHub.Infrastructure.csproj",
+      "msbuildProject": "../EventHub.Infrastructure/EventHub.Infrastructure.csproj"
+    },
     "EventHub.Repository/1.0.0": {
       "type": "project",
       "path": "../EventHub.Repository/EventHub.Repository.csproj",
       "msbuildProject": "../EventHub.Repository/EventHub.Repository.csproj"
-    },
-    "Infrastructure/1.0.0": {
-      "type": "project",
-      "path": "../Infrastructure/Infrastructure.csproj",
-      "msbuildProject": "../Infrastructure/Infrastructure.csproj"
     }
   },
   "projectFileDependencyGroups": {
     "net10.0": [
       "EventHub.Application >= 1.0.0",
+      "EventHub.Infrastructure >= 1.0.0",
       "EventHub.Repository >= 1.0.0",
-      "Infrastructure >= 1.0.0",
       "Microsoft.AspNetCore.OpenApi >= 10.0.9",
       "Microsoft.EntityFrameworkCore.Design >= 10.0.0"
     ]
@@ -4025,11 +4025,11 @@
             "/Users/yigit/RiderProjects/EventHub/src/EventHub.Application/EventHub.Application.csproj": {
               "projectPath": "/Users/yigit/RiderProjects/EventHub/src/EventHub.Application/EventHub.Application.csproj"
             },
+            "/Users/yigit/RiderProjects/EventHub/src/EventHub.Infrastructure/EventHub.Infrastructure.csproj": {
+              "projectPath": "/Users/yigit/RiderProjects/EventHub/src/EventHub.Infrastructure/EventHub.Infrastructure.csproj"
+            },
             "/Users/yigit/RiderProjects/EventHub/src/EventHub.Repository/EventHub.Repository.csproj": {
               "projectPath": "/Users/yigit/RiderProjects/EventHub/src/EventHub.Repository/EventHub.Repository.csproj"
-            },
-            "/Users/yigit/RiderProjects/EventHub/src/Infrastructure/Infrastructure.csproj": {
-              "projectPath": "/Users/yigit/RiderProjects/EventHub/src/Infrastructure/Infrastructure.csproj"
             }
           }
         }

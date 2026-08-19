@@ -1,0 +1,62 @@
+using EventHub.Api.Authorization;
+using EventHub.Application.Common;
+using EventHub.Application.DTOs.Admin;
+using EventHub.Application.DTOs.Profiles;
+using EventHub.Application.Interfaces.Admin;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+namespace EventHub.Api.Controllers;
+
+[ApiController]
+[Route("api/admin")]
+[Authorize(Roles = AppRoles.Admin)]
+public class AdminController(IAdminService adminService) : ControllerBase
+{
+    [HttpGet("organizers/pending")]
+    [HasPermission(AppPermissions.AdminApprove)]
+    public async Task<ActionResult<IReadOnlyList<OrganizerProfileDto>>> GetPendingApprovals(
+        CancellationToken cancellationToken)
+    {
+        var result = await adminService.GetPendingApprovalsAsync(cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpPost("organizers/{userId:int}/approve")]
+    [HasPermission(AppPermissions.AdminApprove)]
+    public async Task<ActionResult<OrganizerProfileDto>> ApproveOrganizer(
+        int userId,
+        CancellationToken cancellationToken)
+    {
+        var result = await adminService.ApproveOrganizerAsync(userId, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpGet("stats")]
+    [HasPermission(AppPermissions.AdminStats)]
+    public async Task<ActionResult<GlobalStatsDto>> GetStats(CancellationToken cancellationToken)
+    {
+        var result = await adminService.GetGlobalStatsAsync(cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpPost("gate-staff")]
+    [HasPermission(AppPermissions.AdminGateStaff)]
+    public async Task<ActionResult<GateStaffProfileDto>> CreateGateStaff(
+        [FromBody] CreateGateStaffDto dto,
+        CancellationToken cancellationToken)
+    {
+        var result = await adminService.CreateGateStaffAsync(dto, cancellationToken);
+        return Ok(result);
+    }
+
+    [HttpPost("gate-staff/assign")]
+    [HasPermission(AppPermissions.AdminGateStaff)]
+    public async Task<ActionResult<GateStaffProfileDto>> AssignGateStaff(
+        [FromBody] AssignGateStaffDto dto,
+        CancellationToken cancellationToken)
+    {
+        var result = await adminService.AssignGateStaffToEventAsync(dto, cancellationToken);
+        return Ok(result);
+    }
+}

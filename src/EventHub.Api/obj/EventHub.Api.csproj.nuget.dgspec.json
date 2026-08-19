@@ -30,11 +30,11 @@
               "/Users/yigit/RiderProjects/EventHub/src/EventHub.Application/EventHub.Application.csproj": {
                 "projectPath": "/Users/yigit/RiderProjects/EventHub/src/EventHub.Application/EventHub.Application.csproj"
               },
+              "/Users/yigit/RiderProjects/EventHub/src/EventHub.Infrastructure/EventHub.Infrastructure.csproj": {
+                "projectPath": "/Users/yigit/RiderProjects/EventHub/src/EventHub.Infrastructure/EventHub.Infrastructure.csproj"
+              },
               "/Users/yigit/RiderProjects/EventHub/src/EventHub.Repository/EventHub.Repository.csproj": {
                 "projectPath": "/Users/yigit/RiderProjects/EventHub/src/EventHub.Repository/EventHub.Repository.csproj"
-              },
-              "/Users/yigit/RiderProjects/EventHub/src/Infrastructure/Infrastructure.csproj": {
-                "projectPath": "/Users/yigit/RiderProjects/EventHub/src/Infrastructure/Infrastructure.csproj"
               }
             }
           }
@@ -1196,14 +1196,14 @@
         }
       }
     },
-    "/Users/yigit/RiderProjects/EventHub/src/EventHub.Repository/EventHub.Repository.csproj": {
+    "/Users/yigit/RiderProjects/EventHub/src/EventHub.Infrastructure/EventHub.Infrastructure.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/Users/yigit/RiderProjects/EventHub/src/EventHub.Repository/EventHub.Repository.csproj",
-        "projectName": "EventHub.Repository",
-        "projectPath": "/Users/yigit/RiderProjects/EventHub/src/EventHub.Repository/EventHub.Repository.csproj",
+        "projectUniqueName": "/Users/yigit/RiderProjects/EventHub/src/EventHub.Infrastructure/EventHub.Infrastructure.csproj",
+        "projectName": "EventHub.Infrastructure",
+        "projectPath": "/Users/yigit/RiderProjects/EventHub/src/EventHub.Infrastructure/EventHub.Infrastructure.csproj",
         "packagesPath": "/Users/yigit/.nuget/packages/",
-        "outputPath": "/Users/yigit/RiderProjects/EventHub/src/EventHub.Repository/obj/",
+        "outputPath": "/Users/yigit/RiderProjects/EventHub/src/EventHub.Infrastructure/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "/Users/yigit/.nuget/NuGet/NuGet.Config"
@@ -1221,9 +1221,6 @@
             "projectReferences": {
               "/Users/yigit/RiderProjects/EventHub/src/EventHub.Application/EventHub.Application.csproj": {
                 "projectPath": "/Users/yigit/RiderProjects/EventHub/src/EventHub.Application/EventHub.Application.csproj"
-              },
-              "/Users/yigit/RiderProjects/EventHub/src/EventHub.Domain/EventHub.Domain.csproj": {
-                "projectPath": "/Users/yigit/RiderProjects/EventHub/src/EventHub.Domain/EventHub.Domain.csproj"
               }
             }
           }
@@ -1245,23 +1242,21 @@
           "framework": "net10.0",
           "targetAlias": "net10.0",
           "dependencies": {
-            "Microsoft.EntityFrameworkCore": {
+            "Microsoft.AspNetCore.Authentication.JwtBearer": {
               "target": "Package",
-              "version": "[10.0.0, )"
+              "version": "[10.0.9, )"
             },
-            "Microsoft.EntityFrameworkCore.Design": {
-              "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
-              "suppressParent": "All",
+            "Microsoft.Extensions.Configuration.Abstractions": {
               "target": "Package",
-              "version": "[10.0.0, )"
+              "version": "[10.0.10, )"
             },
-            "Microsoft.EntityFrameworkCore.SqlServer": {
+            "Microsoft.Extensions.DependencyInjection.Abstractions": {
               "target": "Package",
-              "version": "[10.0.0, )"
+              "version": "[10.0.10, )"
             },
-            "Microsoft.Extensions.Configuration.Json": {
+            "Microsoft.Extensions.Options.ConfigurationExtensions": {
               "target": "Package",
-              "version": "[10.0.0, )"
+              "version": "[10.0.10, )"
             }
           },
           "imports": [
@@ -1558,14 +1553,14 @@
         }
       }
     },
-    "/Users/yigit/RiderProjects/EventHub/src/Infrastructure/Infrastructure.csproj": {
+    "/Users/yigit/RiderProjects/EventHub/src/EventHub.Repository/EventHub.Repository.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/Users/yigit/RiderProjects/EventHub/src/Infrastructure/Infrastructure.csproj",
-        "projectName": "Infrastructure",
-        "projectPath": "/Users/yigit/RiderProjects/EventHub/src/Infrastructure/Infrastructure.csproj",
+        "projectUniqueName": "/Users/yigit/RiderProjects/EventHub/src/EventHub.Repository/EventHub.Repository.csproj",
+        "projectName": "EventHub.Repository",
+        "projectPath": "/Users/yigit/RiderProjects/EventHub/src/EventHub.Repository/EventHub.Repository.csproj",
         "packagesPath": "/Users/yigit/.nuget/packages/",
-        "outputPath": "/Users/yigit/RiderProjects/EventHub/src/Infrastructure/obj/",
+        "outputPath": "/Users/yigit/RiderProjects/EventHub/src/EventHub.Repository/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "/Users/yigit/.nuget/NuGet/NuGet.Config"
@@ -1583,6 +1578,9 @@
             "projectReferences": {
               "/Users/yigit/RiderProjects/EventHub/src/EventHub.Application/EventHub.Application.csproj": {
                 "projectPath": "/Users/yigit/RiderProjects/EventHub/src/EventHub.Application/EventHub.Application.csproj"
+              },
+              "/Users/yigit/RiderProjects/EventHub/src/EventHub.Domain/EventHub.Domain.csproj": {
+                "projectPath": "/Users/yigit/RiderProjects/EventHub/src/EventHub.Domain/EventHub.Domain.csproj"
               }
             }
           }
@@ -1604,21 +1602,23 @@
           "framework": "net10.0",
           "targetAlias": "net10.0",
           "dependencies": {
-            "Microsoft.AspNetCore.Authentication.JwtBearer": {
+            "Microsoft.EntityFrameworkCore": {
               "target": "Package",
-              "version": "[10.0.9, )"
+              "version": "[10.0.0, )"
             },
-            "Microsoft.Extensions.Configuration.Abstractions": {
+            "Microsoft.EntityFrameworkCore.Design": {
+              "include": "Runtime, Build, Native, ContentFiles, Analyzers, BuildTransitive",
+              "suppressParent": "All",
               "target": "Package",
-              "version": "[10.0.10, )"
+              "version": "[10.0.0, )"
             },
-            "Microsoft.Extensions.DependencyInjection.Abstractions": {
+            "Microsoft.EntityFrameworkCore.SqlServer": {
               "target": "Package",
-              "version": "[10.0.10, )"
+              "version": "[10.0.0, )"
             },
-            "Microsoft.Extensions.Options.ConfigurationExtensions": {
+            "Microsoft.Extensions.Configuration.Json": {
               "target": "Package",
-              "version": "[10.0.10, )"
+              "version": "[10.0.0, )"
             }
           },
           "imports": [

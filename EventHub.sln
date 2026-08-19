@@ -10,7 +10,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventHub.Domain", "src\Even
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventHub.Api", "src\EventHub.Api\EventHub.Api.csproj", "{33BB8146-FACC-4F51-B88E-BD487C1AED64}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Infrastructure", "src\Infrastructure\Infrastructure.csproj", "{72BBF5A8-53C2-47AA-A928-730C8E09A3BA}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventHub.Infrastructure", "src\EventHub.Infrastructure\EventHub.Infrastructure.csproj", "{72BBF5A8-53C2-47AA-A928-730C8E09A3BA}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
