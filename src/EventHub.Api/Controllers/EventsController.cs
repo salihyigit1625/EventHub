@@ -4,6 +4,7 @@ using EventHub.Application.DTOs.Events;
 using EventHub.Application.Interfaces.Events;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace EventHub.Api.Controllers;
 
@@ -13,6 +14,7 @@ public class EventsController(IEventService eventService) : ControllerBase
 {
     [HttpGet]
     [AllowAnonymous]
+    [EnableRateLimiting("events-relaxed")]
     public async Task<ActionResult<PagedResult<EventListItemDto>>> GetPublished(
         [FromQuery] EventListQuery query,
         CancellationToken cancellationToken)
@@ -23,6 +25,7 @@ public class EventsController(IEventService eventService) : ControllerBase
 
     [HttpGet("{id:int}")]
     [AllowAnonymous]
+    [EnableRateLimiting("events-relaxed")]
     public async Task<ActionResult<EventDto>> GetById(int id, CancellationToken cancellationToken)
     {
         var result = await eventService.GetByIdAsync(id, cancellationToken);
@@ -32,6 +35,7 @@ public class EventsController(IEventService eventService) : ControllerBase
     [HttpGet("mine")]
     [Authorize(Roles = AppRoles.Organizer)]
     [HasPermission(AppPermissions.EventsCreate)]
+    [EnableRateLimiting("events-relaxed")]
     public async Task<ActionResult<PagedResult<EventListItemDto>>> GetMine(
         [FromQuery] EventListQuery query,
         CancellationToken cancellationToken)
@@ -43,6 +47,7 @@ public class EventsController(IEventService eventService) : ControllerBase
     [HttpPost]
     [Authorize(Roles = AppRoles.Organizer)]
     [HasPermission(AppPermissions.EventsCreate)]
+    [EnableRateLimiting("events-strict")]
     public async Task<ActionResult<EventDto>> Create(
         [FromBody] CreateEventDto dto,
         CancellationToken cancellationToken)
@@ -54,6 +59,7 @@ public class EventsController(IEventService eventService) : ControllerBase
     [HttpPut("{id:int}")]
     [Authorize(Roles = AppRoles.Organizer)]
     [HasPermission(AppPermissions.EventsUpdate)]
+    [EnableRateLimiting("events-strict")]
     public async Task<ActionResult<EventDto>> Update(
         int id,
         [FromBody] UpdateEventDto dto,
@@ -66,6 +72,7 @@ public class EventsController(IEventService eventService) : ControllerBase
     [HttpPost("{id:int}/publish")]
     [Authorize(Roles = AppRoles.Organizer)]
     [HasPermission(AppPermissions.EventsPublish)]
+    [EnableRateLimiting("events-strict")]
     public async Task<ActionResult<EventDto>> Publish(int id, CancellationToken cancellationToken)
     {
         var result = await eventService.PublishAsync(id, cancellationToken);
@@ -75,6 +82,7 @@ public class EventsController(IEventService eventService) : ControllerBase
     [HttpPost("{id:int}/cancel")]
     [Authorize(Roles = AppRoles.Organizer)]
     [HasPermission(AppPermissions.EventsCancel)]
+    [EnableRateLimiting("events-strict")]
     public async Task<ActionResult<EventDto>> Cancel(int id, CancellationToken cancellationToken)
     {
         var result = await eventService.CancelAsync(id, cancellationToken);
@@ -85,19 +93,36 @@ public class EventsController(IEventService eventService) : ControllerBase
     [Consumes("multipart/form-data")]
     [Authorize(Roles = AppRoles.Organizer)]
     [HasPermission(AppPermissions.EventsPosterUpload)]
+    [EnableRateLimiting("events-poster")]
+    [RequestSizeLimit(FileUploadDefaults.MaxFileSizeInBytes)]
+    [RequestFormLimits(MultipartBodyLengthLimit = FileUploadDefaults.MaxFileSizeInBytes)]
     public async Task<ActionResult<EventDto>> UploadPoster(
         int id,
         IFormFile file,
         CancellationToken cancellationToken)
     {
-        await using var stream = new MemoryStream();
+        if (file is null || file.Length == 0)
+            return BadRequest(new { title = "Validation failed", status = 400, detail = "File is required." });
+
+        if (file.Length > FileUploadDefaults.MaxFileSizeInBytes)
+            return BadRequest(new { title = "Validation failed", status = 400, detail = "File size must be 10 MB or less." });
+
+        try
+        {
+            PosterFileValidation.GetSafeExtension(file.FileName);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { title = "Validation failed", status = 400, detail = ex.Message });
+        }
+
+        await using var stream = new MemoryStream((int)file.Length);
         await file.CopyToAsync(stream, cancellationToken);
 
         var dto = new UploadEventPosterDto
         {
             EventId = id,
             OriginalFileName = file.FileName,
-            ContentType = file.ContentType,
             Content = stream.ToArray()
         };
 
@@ -107,9 +132,10 @@ public class EventsController(IEventService eventService) : ControllerBase
 
     [HttpGet("{id:int}/poster")]
     [AllowAnonymous]
+    [EnableRateLimiting("events-relaxed")]
     public async Task<IActionResult> GetPoster(int id, CancellationToken cancellationToken)
     {
-        var (content, contentType, fileName) = await eventService.GetPosterAsync(id, cancellationToken);
-        return File(content, contentType, fileName);
+        var (content, contentType) = await eventService.GetPosterAsync(id, cancellationToken);
+        return File(content, contentType);
     }
 }

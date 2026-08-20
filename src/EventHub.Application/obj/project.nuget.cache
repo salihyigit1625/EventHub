@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "6jmCwOHgFmE=",
+  "dgSpecHash": "zQf7ZrRArHU=",
   "success": true,
-  "projectFilePath": "/Users/yigit/RiderProjects/EventHub/src/EventHub.Application/EventHub.Application.csproj",
+  "projectFilePath": "/Users/yigit/EventHub-Clean/EventHub-1/src/EventHub.Application/EventHub.Application.csproj",
   "expectedPackageFiles": [
     "/Users/yigit/.nuget/packages/automapper/16.2.0/automapper.16.2.0.nupkg.sha512",
     "/Users/yigit/.nuget/packages/fluentvalidation/12.1.1/fluentvalidation.12.1.1.nupkg.sha512",

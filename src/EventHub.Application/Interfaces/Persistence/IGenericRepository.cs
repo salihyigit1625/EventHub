@@ -9,6 +9,13 @@ public interface IGenericRepository<T> where T : class
     Task<IReadOnlyList<T>> FindAsync(
         Expression<Func<T, bool>> predicate,
         CancellationToken cancellationToken = default);
+    Task<(IReadOnlyList<T> Items, int TotalCount)> FindPagedAsync<TKey>(
+        Expression<Func<T, bool>> predicate,
+        Expression<Func<T, TKey>> orderBy,
+        bool descending,
+        int skip,
+        int take,
+        CancellationToken cancellationToken = default);
     Task<T?> FirstOrDefaultAsync(
         Expression<Func<T, bool>> predicate,
         CancellationToken cancellationToken = default);

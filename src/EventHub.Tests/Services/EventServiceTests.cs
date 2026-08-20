@@ -11,6 +11,13 @@ public class EventServiceTests
 {
     private TestDb _db = null!;
 
+    private static readonly byte[] ValidPng =
+    [
+        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D
+    ];
+
+    private static readonly byte[] ValidJpeg = [0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10];
+
     [SetUp]
     public void SetUp() => _db = new TestDb();
 
@@ -62,28 +69,65 @@ public class EventServiceTests
     }
 
     [Test]
-    public async Task Update_DoesNotCheckOrganizerOwnership()
+    public void Update_OtherOrganizer_Throws()
     {
         _db.SeedApprovedOrganizer(10);
         var evt = _db.SeedEvent(organizerId: 10, status: EventStatus.Draft);
         _db.CurrentUser.UserId = 99;
 
+        Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            _db.CreateEventService().UpdateAsync(evt.Id, new UpdateEventDto
+            {
+                Title = "Hijacked",
+                Venue = "Other",
+                StartDate = evt.StartDate,
+                EndDate = evt.EndDate,
+                CancellationDeadlineHours = 12
+            }));
+    }
+
+    [Test]
+    public async Task Update_OwnerDraft_Succeeds()
+    {
+        _db.SeedApprovedOrganizer(10);
+        var evt = _db.SeedEvent(organizerId: 10, status: EventStatus.Draft);
+        _db.CurrentUser.UserId = 10;
+
         var updated = await _db.CreateEventService().UpdateAsync(evt.Id, new UpdateEventDto
         {
-            Title = "Hijacked",
-            Venue = "Other",
+            Title = "Updated",
+            Venue = "Hall",
             StartDate = evt.StartDate,
             EndDate = evt.EndDate,
             CancellationDeadlineHours = 12
         });
 
-        Assert.That(updated.Title, Is.EqualTo("Hijacked"));
+        Assert.That(updated.Title, Is.EqualTo("Updated"));
+    }
+
+    [Test]
+    public void Update_PublishedEvent_Throws()
+    {
+        var evt = _db.SeedEvent(organizerId: 10, status: EventStatus.Published);
+        _db.CurrentUser.UserId = 10;
+
+        Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _db.CreateEventService().UpdateAsync(evt.Id, new UpdateEventDto
+            {
+                Title = "X",
+                Venue = "Y",
+                StartDate = evt.StartDate,
+                EndDate = evt.EndDate,
+                CancellationDeadlineHours = 1
+            }));
     }
 
     [Test]
     public void Update_CancelledEvent_Throws()
     {
-        var evt = _db.SeedEvent(status: EventStatus.Cancelled);
+        var evt = _db.SeedEvent(organizerId: 10, status: EventStatus.Cancelled);
+        _db.CurrentUser.UserId = 10;
+
         Assert.ThrowsAsync<InvalidOperationException>(() =>
             _db.CreateEventService().UpdateAsync(evt.Id, new UpdateEventDto
             {
@@ -98,7 +142,9 @@ public class EventServiceTests
     [Test]
     public void Publish_WithoutTicketTypes_Throws()
     {
-        var evt = _db.SeedEvent(status: EventStatus.Draft);
+        var evt = _db.SeedEvent(organizerId: 10, status: EventStatus.Draft);
+        _db.CurrentUser.UserId = 10;
+
         Assert.ThrowsAsync<InvalidOperationException>(() =>
             _db.CreateEventService().PublishAsync(evt.Id));
     }
@@ -106,17 +152,31 @@ public class EventServiceTests
     [Test]
     public void Publish_NonDraft_Throws()
     {
-        var evt = _db.SeedEvent(status: EventStatus.Published);
+        var evt = _db.SeedEvent(organizerId: 10, status: EventStatus.Published);
         _db.SeedTicketType(evt.Id);
+        _db.CurrentUser.UserId = 10;
+
         Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _db.CreateEventService().PublishAsync(evt.Id));
+    }
+
+    [Test]
+    public void Publish_OtherOrganizer_Throws()
+    {
+        var evt = _db.SeedEvent(organizerId: 10, status: EventStatus.Draft);
+        _db.SeedTicketType(evt.Id);
+        _db.CurrentUser.UserId = 99;
+
+        Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
             _db.CreateEventService().PublishAsync(evt.Id));
     }
 
     [Test]
     public async Task Publish_DraftWithTicketType_Succeeds()
     {
-        var evt = _db.SeedEvent(status: EventStatus.Draft);
+        var evt = _db.SeedEvent(organizerId: 10, status: EventStatus.Draft);
         _db.SeedTicketType(evt.Id);
+        _db.CurrentUser.UserId = 10;
 
         var published = await _db.CreateEventService().PublishAsync(evt.Id);
 
@@ -127,7 +187,8 @@ public class EventServiceTests
     [Test]
     public async Task Cancel_RefundsPaidTickets()
     {
-        var evt = _db.SeedEvent(status: EventStatus.Published);
+        var evt = _db.SeedEvent(organizerId: 10, status: EventStatus.Published);
+        _db.CurrentUser.UserId = 10;
         var type = _db.SeedTicketType(evt.Id, remaining: 9, total: 10);
         var attendee = _db.SeedAttendee(20, 50m);
         var ticket = _db.SeedTicket(type.Id, attendee.UserId, price: 100m);
@@ -149,18 +210,48 @@ public class EventServiceTests
     }
 
     [Test]
+    public void Cancel_OtherOrganizer_Throws()
+    {
+        var evt = _db.SeedEvent(organizerId: 10, status: EventStatus.Published);
+        _db.CurrentUser.UserId = 99;
+
+        Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            _db.CreateEventService().CancelAsync(evt.Id));
+    }
+
+    [Test]
     public void Cancel_AlreadyCancelled_Throws()
     {
-        var evt = _db.SeedEvent(status: EventStatus.Cancelled);
+        var evt = _db.SeedEvent(organizerId: 10, status: EventStatus.Cancelled);
+        _db.CurrentUser.UserId = 10;
+
         Assert.ThrowsAsync<InvalidOperationException>(() => _db.CreateEventService().CancelAsync(evt.Id));
     }
 
     [Test]
-    public async Task GetById_ReturnsDraftWithoutPublishedFilter()
+    public void GetById_Draft_Anonymous_Throws()
     {
         var evt = _db.SeedEvent(status: EventStatus.Draft);
+        Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            _db.CreateEventService().GetByIdAsync(evt.Id));
+    }
+
+    [Test]
+    public async Task GetById_Draft_Owner_Returns()
+    {
+        var evt = _db.SeedEvent(organizerId: 10, status: EventStatus.Draft);
+        _db.CurrentUser.UserId = 10;
+
         var dto = await _db.CreateEventService().GetByIdAsync(evt.Id);
         Assert.That(dto.Status, Is.EqualTo(EventStatus.Draft));
+    }
+
+    [Test]
+    public async Task GetById_Published_Anonymous_Returns()
+    {
+        var evt = _db.SeedEvent(status: EventStatus.Published);
+        var dto = await _db.CreateEventService().GetByIdAsync(evt.Id);
+        Assert.That(dto.Status, Is.EqualTo(EventStatus.Published));
     }
 
     [Test]
@@ -211,6 +302,7 @@ public class EventServiceTests
             Venue = "istanbul",
             From = start.AddDays(-1),
             To = start.AddDays(1),
+            Status = EventStatus.Draft,
             Page = 1,
             PageSize = 10
         });
@@ -291,9 +383,9 @@ public class EventServiceTests
     }
 
     [Test]
-    public async Task UploadPoster_RejectsDisallowedExtension_AllowsDoubleExtensionPng()
+    public void UploadPoster_RejectsDisallowedExtensionAndInvalidContent()
     {
-        var evt = _db.SeedEvent();
+        var evt = _db.SeedEvent(organizerId: 10);
         _db.CurrentUser.UserId = 10;
 
         Assert.ThrowsAsync<InvalidOperationException>(() =>
@@ -301,45 +393,118 @@ public class EventServiceTests
             {
                 EventId = evt.Id,
                 OriginalFileName = "payload.png.exe",
-                ContentType = "image/png",
-                Content = [1, 2, 3]
+                Content = ValidPng
             }));
+
+        Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _db.CreateEventService().UploadPosterAsync(new UploadEventPosterDto
+            {
+                EventId = evt.Id,
+                OriginalFileName = "payload.exe.png",
+                Content = [0x4D, 0x5A, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
+            }));
+    }
+
+    [Test]
+    public async Task UploadPoster_StoresGuidNameAndRejectsTraversal()
+    {
+        var evt = _db.SeedEvent(organizerId: 10);
+        _db.CurrentUser.UserId = 10;
 
         var uploaded = await _db.CreateEventService().UploadPosterAsync(new UploadEventPosterDto
         {
             EventId = evt.Id,
-            OriginalFileName = "payload.exe.png",
-            ContentType = "image/png",
-            Content = [1, 2, 3]
+            OriginalFileName = "sub/../../poc.exe.png",
+            Content = ValidPng
         });
 
         Assert.That(uploaded.PosterDocumentId, Is.Not.Null);
-        Assert.That(_db.Documents.Items.Single().StoredFileName, Is.EqualTo("payload.exe.png"));
+        var document = _db.Documents.Items.Single();
+        Assert.That(document.StoredFileName, Does.Match("^[a-f0-9]{32}\\.png$"));
+        Assert.That(document.OriginalFileName, Is.EqualTo("poc.exe.png"));
+        Assert.That(_db.FileStorage.Files.ContainsKey(document.StoredFileName), Is.True);
     }
 
     [Test]
-    public async Task GetPoster_ReadsStoredFile()
+    public async Task UploadPoster_ReplacesPreviousPoster()
     {
-        var evt = _db.SeedEvent();
+        var evt = _db.SeedEvent(organizerId: 10);
+        _db.CurrentUser.UserId = 10;
+
+        await _db.CreateEventService().UploadPosterAsync(new UploadEventPosterDto
+        {
+            EventId = evt.Id,
+            OriginalFileName = "first.png",
+            Content = ValidPng
+        });
+        var firstStored = _db.Documents.Items.Single().StoredFileName;
+
+        await _db.CreateEventService().UploadPosterAsync(new UploadEventPosterDto
+        {
+            EventId = evt.Id,
+            OriginalFileName = "second.jpg",
+            Content = ValidJpeg
+        });
+
+        Assert.That(_db.Documents.Items, Has.Count.EqualTo(1));
+        Assert.That(_db.FileStorage.Files.ContainsKey(firstStored), Is.False);
+        Assert.That(_db.Documents.Items.Single().StoredFileName, Does.EndWith(".jpg"));
+    }
+
+    [Test]
+    public void UploadPoster_OtherOrganizer_Throws()
+    {
+        var evt = _db.SeedEvent(organizerId: 10);
+        _db.CurrentUser.UserId = 99;
+
+        Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            _db.CreateEventService().UploadPosterAsync(new UploadEventPosterDto
+            {
+                EventId = evt.Id,
+                OriginalFileName = "poster.png",
+                Content = ValidPng
+            }));
+    }
+
+    [Test]
+    public async Task GetPoster_Published_ReadsStoredFile()
+    {
+        var evt = _db.SeedEvent(organizerId: 10, status: EventStatus.Published);
         _db.CurrentUser.UserId = 10;
         await _db.CreateEventService().UploadPosterAsync(new UploadEventPosterDto
         {
             EventId = evt.Id,
             OriginalFileName = "poster.jpg",
-            ContentType = "image/jpeg",
-            Content = [9, 8, 7]
+            Content = ValidJpeg
         });
 
+        _db.CurrentUser.UserId = null;
         var poster = await _db.CreateEventService().GetPosterAsync(evt.Id);
 
-        Assert.That(poster.FileName, Is.EqualTo("poster.jpg"));
-        Assert.That(poster.Content, Is.EqualTo(new byte[] { 9, 8, 7 }));
+        Assert.That(poster.ContentType, Is.EqualTo("image/jpeg"));
+        Assert.That(poster.Content, Is.EqualTo(ValidJpeg));
+    }
+
+    [Test]
+    public async Task GetPoster_Draft_Throws()
+    {
+        var evt = _db.SeedEvent(organizerId: 10, status: EventStatus.Draft);
+        _db.CurrentUser.UserId = 10;
+        await _db.CreateEventService().UploadPosterAsync(new UploadEventPosterDto
+        {
+            EventId = evt.Id,
+            OriginalFileName = "poster.png",
+            Content = ValidPng
+        });
+
+        Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            _db.CreateEventService().GetPosterAsync(evt.Id));
     }
 
     [Test]
     public void GetPoster_WhenMissing_Throws()
     {
-        var evt = _db.SeedEvent();
+        var evt = _db.SeedEvent(status: EventStatus.Published);
         Assert.ThrowsAsync<InvalidOperationException>(() =>
             _db.CreateEventService().GetPosterAsync(evt.Id));
     }

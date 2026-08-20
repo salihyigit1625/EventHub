@@ -4,9 +4,6 @@ using EventHub.Application.DTOs.Events;
 using EventHub.Application.Interfaces.Persistence;
 using EventHub.Application.Interfaces.Identity;
 using EventHub.Application.Interfaces.Events;
-using EventHub.Application.Interfaces.Profiles;
-using EventHub.Application.Interfaces.Ticketing;
-using EventHub.Application.Interfaces.Admin;
 using EventHub.Application.Interfaces.Storage;
 using EventHub.Domain.Entities.Events;
 using EventHub.Domain.Entities.Profiles;
@@ -58,6 +55,11 @@ public class EventService(
         var entity = await eventRepository.GetByIdAsync(eventId, cancellationToken)
             ?? throw new KeyNotFoundException($"Event ({eventId}) was not found.");
 
+        EventOwnership.EnsureOwnedBy(entity, currentUser.UserId);
+
+        if (entity.Status == EventStatus.Published)
+            throw new InvalidOperationException("Published events cannot be updated.");
+
         if (entity.Status is EventStatus.Cancelled or EventStatus.Completed)
             throw new InvalidOperationException("Cancelled or completed events cannot be updated.");
 
@@ -72,6 +74,8 @@ public class EventService(
     {
         var entity = await eventRepository.GetByIdAsync(eventId, cancellationToken)
             ?? throw new KeyNotFoundException($"Event ({eventId}) was not found.");
+
+        EventOwnership.EnsureOwnedBy(entity, currentUser.UserId);
 
         if (entity.Status != EventStatus.Draft)
             throw new InvalidOperationException("Only draft events can be published.");
@@ -91,6 +95,8 @@ public class EventService(
     {
         var entity = await eventRepository.GetByIdAsync(eventId, cancellationToken)
             ?? throw new KeyNotFoundException($"Event ({eventId}) was not found.");
+
+        EventOwnership.EnsureOwnedBy(entity, currentUser.UserId);
 
         if (entity.Status is EventStatus.Cancelled or EventStatus.Completed)
             throw new InvalidOperationException("This event cannot be cancelled.");
@@ -147,21 +153,39 @@ public class EventService(
         var entity = await eventRepository.GetByIdAsync(dto.EventId, cancellationToken)
             ?? throw new KeyNotFoundException($"Event ({dto.EventId}) was not found.");
 
-        ValidateFileExtension(dto.OriginalFileName);
+        EventOwnership.EnsureOwnedBy(entity, currentUser.UserId);
+
+        var extension = PosterFileValidation.GetSafeExtension(dto.OriginalFileName);
+        PosterFileValidation.EnsureMagicBytesMatch(dto.Content, extension);
 
         var userId = currentUser.UserId
             ?? throw new UnauthorizedAccessException("Authentication is required.");
 
+        if (entity.PosterDocumentId is { } existingPosterId)
+        {
+            var previous = await documentRepository.GetByIdAsync(existingPosterId, cancellationToken);
+            if (previous is not null)
+            {
+                await fileStorage.DeleteAsync(previous.StoredFileName, cancellationToken);
+                documentRepository.Remove(previous);
+            }
+
+            entity.PosterDocumentId = null;
+        }
+
+        var storedFileName = $"{Guid.NewGuid():N}{extension}";
+        var contentType = PosterFileValidation.ContentTypeForExtension(extension);
+
         var stored = await fileStorage.SaveAsync(
             dto.Content,
-            dto.OriginalFileName,
-            dto.ContentType,
+            storedFileName,
+            contentType,
             cancellationToken);
 
         var document = new Document
         {
             UploadedByUserId = userId,
-            OriginalFileName = dto.OriginalFileName,
+            OriginalFileName = Path.GetFileName(dto.OriginalFileName),
             StoredFileName = stored.StoredFileName,
             FilePath = stored.FilePath,
             ContentType = stored.ContentType,
@@ -183,16 +207,50 @@ public class EventService(
         var entity = await eventRepository.GetByIdAsync(eventId, cancellationToken)
             ?? throw new KeyNotFoundException($"Event ({eventId}) was not found.");
 
-        return await BuildEventDtoAsync(entity, cancellationToken);
+        if (entity.Status == EventStatus.Published)
+            return await BuildEventDtoAsync(entity, cancellationToken);
+
+        if (currentUser.UserId is { } userId && entity.OrganizerId == userId)
+            return await BuildEventDtoAsync(entity, cancellationToken);
+
+        throw new KeyNotFoundException($"Event ({eventId}) was not found.");
     }
 
     public async Task<PagedResult<EventListItemDto>> GetPublishedAsync(
         EventListQuery query,
         CancellationToken cancellationToken = default)
     {
-        var events = await eventRepository.FindAsync(e => e.Status == EventStatus.Published, cancellationToken);
-        var filtered = FilterEvents(events, query).OrderBy(e => e.StartDate).ToList();
-        return Page(filtered, query, e => mapper.Map<EventListItemDto>(e));
+        var publicQuery = new EventListQuery
+        {
+            Search = query.Search,
+            Venue = query.Venue,
+            From = query.From,
+            To = query.To,
+            Page = query.Page,
+            PageSize = query.PageSize,
+            Status = null
+        };
+
+        var predicate = BuildEventFilter(
+            organizerId: null,
+            requirePublished: true,
+            publicQuery);
+
+        var (items, totalCount) = await eventRepository.FindPagedAsync(
+            predicate,
+            e => e.StartDate,
+            descending: false,
+            query.Skip,
+            query.Take,
+            cancellationToken);
+
+        return new PagedResult<EventListItemDto>
+        {
+            Items = items.Select(e => mapper.Map<EventListItemDto>(e)).ToList(),
+            Page = Math.Max(query.Page, 1),
+            PageSize = query.Take,
+            TotalCount = totalCount
+        };
     }
 
     public async Task<PagedResult<EventListItemDto>> GetMyEventsAsync(
@@ -202,17 +260,37 @@ public class EventService(
         var organizerId = currentUser.UserId
             ?? throw new UnauthorizedAccessException("Authentication is required.");
 
-        var events = await eventRepository.FindAsync(e => e.OrganizerId == organizerId, cancellationToken);
-        var filtered = FilterEvents(events, query).OrderByDescending(e => e.CreatedAt).ToList();
-        return Page(filtered, query, e => mapper.Map<EventListItemDto>(e));
+        var predicate = BuildEventFilter(
+            organizerId,
+            requirePublished: false,
+            query);
+
+        var (items, totalCount) = await eventRepository.FindPagedAsync(
+            predicate,
+            e => e.CreatedAt,
+            descending: true,
+            query.Skip,
+            query.Take,
+            cancellationToken);
+
+        return new PagedResult<EventListItemDto>
+        {
+            Items = items.Select(e => mapper.Map<EventListItemDto>(e)).ToList(),
+            Page = Math.Max(query.Page, 1),
+            PageSize = query.Take,
+            TotalCount = totalCount
+        };
     }
 
-    public async Task<(byte[] Content, string ContentType, string FileName)> GetPosterAsync(
+    public async Task<(byte[] Content, string ContentType)> GetPosterAsync(
         int eventId,
         CancellationToken cancellationToken = default)
     {
         var entity = await eventRepository.GetByIdAsync(eventId, cancellationToken)
             ?? throw new KeyNotFoundException($"Event ({eventId}) was not found.");
+
+        if (entity.Status != EventStatus.Published)
+            throw new KeyNotFoundException($"Event ({eventId}) was not found.");
 
         if (entity.PosterDocumentId is null)
             throw new InvalidOperationException("This event has no poster.");
@@ -220,8 +298,7 @@ public class EventService(
         var document = await documentRepository.GetByIdAsync(entity.PosterDocumentId.Value, cancellationToken)
             ?? throw new KeyNotFoundException("Poster document was not found.");
 
-        var (content, contentType) = await fileStorage.ReadAsync(document.StoredFileName, cancellationToken);
-        return (content, contentType, document.OriginalFileName);
+        return await fileStorage.ReadAsync(document.StoredFileName, cancellationToken);
     }
 
     private async Task<EventDto> BuildEventDtoAsync(Event entity, CancellationToken cancellationToken)
@@ -232,47 +309,24 @@ public class EventService(
         return dto;
     }
 
-    private static IEnumerable<Event> FilterEvents(IEnumerable<Event> events, EventListQuery query)
+    private static System.Linq.Expressions.Expression<Func<Event, bool>> BuildEventFilter(
+        int? organizerId,
+        bool requirePublished,
+        EventListQuery query)
     {
-        if (!string.IsNullOrWhiteSpace(query.Search))
-        {
-            var search = query.Search.Trim();
-            events = events.Where(e => e.Title.Contains(search, StringComparison.OrdinalIgnoreCase));
-        }
+        var search = string.IsNullOrWhiteSpace(query.Search) ? null : query.Search.Trim().ToLowerInvariant();
+        var venue = string.IsNullOrWhiteSpace(query.Venue) ? null : query.Venue.Trim().ToLowerInvariant();
+        var from = query.From;
+        var to = query.To;
+        var status = query.Status;
 
-        if (!string.IsNullOrWhiteSpace(query.Venue))
-        {
-            var venue = query.Venue.Trim();
-            events = events.Where(e => e.Venue.Contains(venue, StringComparison.OrdinalIgnoreCase));
-        }
-
-        if (query.From is { } from)
-            events = events.Where(e => e.StartDate >= from);
-
-        if (query.To is { } to)
-            events = events.Where(e => e.StartDate <= to);
-
-        if (query.Status is { } status)
-            events = events.Where(e => e.Status == status);
-
-        return events;
-    }
-
-    private static PagedResult<TOut> Page<T, TOut>(IReadOnlyList<T> items, PagingQuery query, Func<T, TOut> map)
-    {
-        return new PagedResult<TOut>
-        {
-            Items = items.Skip(query.Skip).Take(query.Take).Select(map).ToList(),
-            Page = Math.Max(query.Page, 1),
-            PageSize = query.Take,
-            TotalCount = items.Count
-        };
-    }
-
-    private static void ValidateFileExtension(string fileName)
-    {
-        var extension = Path.GetExtension(fileName).ToLowerInvariant();
-        if (!Common.FileUploadDefaults.AllowedExtensions.Contains(extension))
-            throw new InvalidOperationException("Only .png, .jpg and .pdf files are allowed.");
+        return e =>
+            (!requirePublished || e.Status == EventStatus.Published)
+            && (organizerId == null || e.OrganizerId == organizerId.Value)
+            && (status == null || e.Status == status.Value)
+            && (search == null || e.Title.ToLowerInvariant().Contains(search))
+            && (venue == null || e.Venue.ToLowerInvariant().Contains(venue))
+            && (from == null || e.StartDate >= from.Value)
+            && (to == null || e.StartDate <= to.Value);
     }
 }

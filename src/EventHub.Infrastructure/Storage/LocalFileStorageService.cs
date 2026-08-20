@@ -5,7 +5,7 @@ namespace EventHub.Infrastructure.Storage;
 
 public class LocalFileStorageService(IOptions<FileStorageOptions> options) : IFileStorageService
 {
-    private readonly string _uploadRoot = options.Value.UploadPath;
+    private readonly string _uploadRoot = Path.GetFullPath(options.Value.UploadPath);
 
     public async Task<(string StoredFileName, string FilePath, string ContentType, long FileSizeInBytes)> SaveAsync(
         byte[] content,
@@ -16,21 +16,51 @@ public class LocalFileStorageService(IOptions<FileStorageOptions> options) : IFi
         if (!Directory.Exists(_uploadRoot))
             Directory.CreateDirectory(_uploadRoot);
 
-        var filePath = Path.Combine(_uploadRoot, originalFileName);
+        var safeName = Path.GetFileName(originalFileName);
+        if (string.IsNullOrWhiteSpace(safeName))
+            throw new InvalidOperationException("Invalid file name.");
+
+        var filePath = ResolvePathInsideRoot(safeName);
 
         await File.WriteAllBytesAsync(filePath, content, cancellationToken);
 
-        return (originalFileName, filePath, contentType, content.Length);
+        return (safeName, filePath, contentType, content.Length);
     }
 
     public async Task<(byte[] Content, string ContentType)> ReadAsync(
         string fileName,
         CancellationToken cancellationToken = default)
     {
-        var filePath = Path.Combine(_uploadRoot, fileName);
+        var filePath = ResolvePathInsideRoot(fileName);
         var content = await File.ReadAllBytesAsync(filePath, cancellationToken);
         var contentType = GetContentType(fileName);
         return (content, contentType);
+    }
+
+    public Task DeleteAsync(string fileName, CancellationToken cancellationToken = default)
+    {
+        var filePath = ResolvePathInsideRoot(fileName);
+        if (File.Exists(filePath))
+            File.Delete(filePath);
+
+        return Task.CompletedTask;
+    }
+
+    private string ResolvePathInsideRoot(string fileName)
+    {
+        var safeName = Path.GetFileName(fileName);
+        if (string.IsNullOrWhiteSpace(safeName))
+            throw new InvalidOperationException("Invalid file name.");
+
+        var fullPath = Path.GetFullPath(Path.Combine(_uploadRoot, safeName));
+        var rootWithSeparator = _uploadRoot.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                                 + Path.DirectorySeparatorChar;
+
+        if (!fullPath.StartsWith(rootWithSeparator, StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(fullPath, _uploadRoot, StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException("Invalid file path.");
+
+        return fullPath;
     }
 
     private static string GetContentType(string fileName)

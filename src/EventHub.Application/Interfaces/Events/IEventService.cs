@@ -13,5 +13,5 @@ public interface IEventService
     Task<EventDto> GetByIdAsync(int eventId, CancellationToken cancellationToken = default);
     Task<PagedResult<EventListItemDto>> GetPublishedAsync(EventListQuery query, CancellationToken cancellationToken = default);
     Task<PagedResult<EventListItemDto>> GetMyEventsAsync(EventListQuery query, CancellationToken cancellationToken = default);
-    Task<(byte[] Content, string ContentType, string FileName)> GetPosterAsync(int eventId, CancellationToken cancellationToken = default);
+    Task<(byte[] Content, string ContentType)> GetPosterAsync(int eventId, CancellationToken cancellationToken = default);
 }

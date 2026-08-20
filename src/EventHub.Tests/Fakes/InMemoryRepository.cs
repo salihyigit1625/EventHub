@@ -28,6 +28,25 @@ public class InMemoryRepository<T> : IGenericRepository<T> where T : class
         return Task.FromResult<IReadOnlyList<T>>(_items.Where(compiled).ToList());
     }
 
+    public Task<(IReadOnlyList<T> Items, int TotalCount)> FindPagedAsync<TKey>(
+        Expression<Func<T, bool>> predicate,
+        Expression<Func<T, TKey>> orderBy,
+        bool descending,
+        int skip,
+        int take,
+        CancellationToken cancellationToken = default)
+    {
+        var compiled = predicate.Compile();
+        var keySelector = orderBy.Compile();
+        var filtered = _items.Where(compiled);
+        var totalCount = filtered.Count();
+        var ordered = descending
+            ? filtered.OrderByDescending(keySelector)
+            : filtered.OrderBy(keySelector);
+        var items = ordered.Skip(skip).Take(take).ToList();
+        return Task.FromResult<(IReadOnlyList<T>, int)>((items, totalCount));
+    }
+
     public Task<T?> FirstOrDefaultAsync(
         Expression<Func<T, bool>> predicate,
         CancellationToken cancellationToken = default)

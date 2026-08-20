@@ -73,7 +73,7 @@ public class ValidatorTests
     [Test]
     public void CreateEvent_EndDateMustBeAfterStart()
     {
-        var now = DateTime.UtcNow;
+        var now = DateTime.UtcNow.AddDays(1);
         var result = new CreateEventDtoValidator().Validate(new CreateEventDto
         {
             Title = "Show",
@@ -87,9 +87,23 @@ public class ValidatorTests
     }
 
     [Test]
+    public void CreateEvent_PastStartDate_IsInvalid()
+    {
+        var result = new CreateEventDtoValidator().Validate(new CreateEventDto
+        {
+            Title = "Show",
+            Venue = "Hall",
+            StartDate = DateTime.UtcNow.AddDays(-1),
+            EndDate = DateTime.UtcNow.AddDays(1)
+        });
+        Assert.That(result.IsValid, Is.False);
+        Assert.That(result.Errors.Any(e => e.PropertyName == "StartDate"), Is.True);
+    }
+
+    [Test]
     public void CreateEvent_Valid()
     {
-        var now = DateTime.UtcNow;
+        var now = DateTime.UtcNow.AddDays(1);
         var result = new CreateEventDtoValidator().Validate(new CreateEventDto
         {
             Title = "Show",
@@ -103,7 +117,7 @@ public class ValidatorTests
     [Test]
     public void UpdateEvent_NegativeDeadline_IsInvalid()
     {
-        var now = DateTime.UtcNow;
+        var now = DateTime.UtcNow.AddDays(1);
         var result = new UpdateEventDtoValidator().Validate(new UpdateEventDto
         {
             Title = "Show",
@@ -174,7 +188,6 @@ public class ValidatorTests
         {
             EventId = 1,
             OriginalFileName = "a.png",
-            ContentType = "image/png",
             Content = []
         });
         Assert.That(result.IsValid, Is.False);
@@ -187,7 +200,6 @@ public class ValidatorTests
         {
             EventId = 1,
             OriginalFileName = "a.png",
-            ContentType = "image/png",
             Content = new byte[FileUploadDefaults.MaxFileSizeInBytes + 1]
         });
         Assert.That(result.IsValid, Is.False);
