@@ -1234,11 +1234,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/Users/yigit/RiderProjects/EventHub/src/EventHub.Infrastructure/EventHub.Infrastructure.csproj",
+      "projectUniqueName": "/Users/yigit/EventHub-Clean/EventHub-1/src/EventHub.Infrastructure/EventHub.Infrastructure.csproj",
       "projectName": "EventHub.Infrastructure",
-      "projectPath": "/Users/yigit/RiderProjects/EventHub/src/EventHub.Infrastructure/EventHub.Infrastructure.csproj",
+      "projectPath": "/Users/yigit/EventHub-Clean/EventHub-1/src/EventHub.Infrastructure/EventHub.Infrastructure.csproj",
       "packagesPath": "/Users/yigit/.nuget/packages/",
-      "outputPath": "/Users/yigit/RiderProjects/EventHub/src/EventHub.Infrastructure/obj/",
+      "outputPath": "/Users/yigit/EventHub-Clean/EventHub-1/src/EventHub.Infrastructure/obj/",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "/Users/yigit/.nuget/NuGet/NuGet.Config"
@@ -1254,8 +1254,8 @@
           "framework": "net10.0",
           "targetAlias": "net10.0",
           "projectReferences": {
-            "/Users/yigit/RiderProjects/EventHub/src/EventHub.Application/EventHub.Application.csproj": {
-              "projectPath": "/Users/yigit/RiderProjects/EventHub/src/EventHub.Application/EventHub.Application.csproj"
+            "/Users/yigit/EventHub-Clean/EventHub-1/src/EventHub.Application/EventHub.Application.csproj": {
+              "projectPath": "/Users/yigit/EventHub-Clean/EventHub-1/src/EventHub.Application/EventHub.Application.csproj"
             }
           }
         }

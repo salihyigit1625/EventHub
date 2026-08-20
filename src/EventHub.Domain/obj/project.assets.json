@@ -13,11 +13,11 @@
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/Users/yigit/RiderProjects/EventHub/src/EventHub.Domain/EventHub.Domain.csproj",
+      "projectUniqueName": "/Users/yigit/EventHub-Clean/EventHub-1/src/EventHub.Domain/EventHub.Domain.csproj",
       "projectName": "EventHub.Domain",
-      "projectPath": "/Users/yigit/RiderProjects/EventHub/src/EventHub.Domain/EventHub.Domain.csproj",
+      "projectPath": "/Users/yigit/EventHub-Clean/EventHub-1/src/EventHub.Domain/EventHub.Domain.csproj",
       "packagesPath": "/Users/yigit/.nuget/packages/",
-      "outputPath": "/Users/yigit/RiderProjects/EventHub/src/EventHub.Domain/obj/",
+      "outputPath": "/Users/yigit/EventHub-Clean/EventHub-1/src/EventHub.Domain/obj/",
       "projectStyle": "PackageReference",
       "configFilePaths": [
         "/Users/yigit/.nuget/NuGet/NuGet.Config"

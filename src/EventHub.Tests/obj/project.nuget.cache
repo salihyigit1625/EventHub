@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "puxBS0R4fDo=",
+  "dgSpecHash": "nY3K+yxk5N0=",
   "success": true,
-  "projectFilePath": "/Users/yigit/RiderProjects/EventHub/src/EventHub.Tests/EventHub.Tests.csproj",
+  "projectFilePath": "/Users/yigit/EventHub-Clean/EventHub-1/src/EventHub.Tests/EventHub.Tests.csproj",
   "expectedPackageFiles": [
     "/Users/yigit/.nuget/packages/automapper/16.2.0/automapper.16.2.0.nupkg.sha512",
     "/Users/yigit/.nuget/packages/azure.core/1.47.1/azure.core.1.47.1.nupkg.sha512",

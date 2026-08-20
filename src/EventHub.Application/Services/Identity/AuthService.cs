@@ -168,7 +168,7 @@ public class AuthService(
         var normalizedEmail = email.Trim().ToLowerInvariant();
 
         if (await userRepository.AnyAsync(u => u.Email == normalizedEmail, cancellationToken))
-            throw new InvalidOperationException("A user with this email already exists.");
+            throw new InvalidOperationException(AuthMessages.RegistrationFailed);
 
         var role = await roleRepository.FirstOrDefaultAsync(r => r.Name == roleName, cancellationToken)
             ?? throw new KeyNotFoundException($"Role '{roleName}' was not found.");

@@ -17,7 +17,7 @@ public class JwtTokenServiceTests
             SecretKey = "EventHubDevSecretKey_ChangeMe_32chars!",
             Issuer = "EventHub",
             Audience = "EventHubClients",
-            ExpiresInMinutes = 60
+            ExpiresInMinutes = 15
         }));
 
         var token = service.GenerateAccessToken(
@@ -34,7 +34,8 @@ public class JwtTokenServiceTests
         Assert.That(jwt.Claims.Any(c => c.Type == "fullName" && c.Value == "Ada"), Is.True);
         Assert.That(jwt.Claims.Any(c => c.Type is ClaimTypes.Role or "role" && c.Value == "Attendee"), Is.True);
         Assert.That(jwt.Claims.Count(c => c.Type == "permission"), Is.EqualTo(2));
-        Assert.That(jwt.ValidTo, Is.GreaterThan(DateTime.UtcNow.AddMinutes(50)));
+        Assert.That(jwt.ValidTo, Is.GreaterThan(DateTime.UtcNow.AddMinutes(10)));
+        Assert.That(jwt.ValidTo, Is.LessThan(DateTime.UtcNow.AddMinutes(20)));
     }
 
     [Test]

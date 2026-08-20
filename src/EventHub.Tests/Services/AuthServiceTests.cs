@@ -70,17 +70,19 @@ public class AuthServiceTests
     }
 
     [Test]
-    public void RegisterAttendee_DuplicateEmail_Throws()
+    public void RegisterAttendee_DuplicateEmail_ThrowsGenericMessage()
     {
         _db.Users.Seed(new User { Email = "ada@eventhub.local", FullName = "Existing" });
 
-        Assert.ThrowsAsync<InvalidOperationException>(() =>
+        var ex = Assert.ThrowsAsync<InvalidOperationException>(() =>
             _db.CreateAuthService().RegisterAttendeeAsync(new RegisterAttendeeDto
             {
                 Email = "ADA@eventhub.local",
                 Password = "Secret1!",
                 FullName = "Ada"
             }));
+
+        Assert.That(ex!.Message, Is.EqualTo(AuthMessages.RegistrationFailed));
     }
 
     [Test]
@@ -230,7 +232,7 @@ public class AuthServiceTests
     }
 
     [Test]
-    public async Task Logout_ClearsRefreshToken_DoesNotTouchAccessTokenGeneration()
+    public async Task Logout_ClearsRefreshToken()
     {
         var registered = await _db.CreateAuthService().RegisterAttendeeAsync(new RegisterAttendeeDto
         {

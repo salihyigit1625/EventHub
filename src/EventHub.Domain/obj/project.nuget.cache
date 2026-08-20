@@ -1,8 +1,8 @@
 {
   "version": 2,
-  "dgSpecHash": "Kjrb6hu8i4o=",
+  "dgSpecHash": "f3jiXIgJsuk=",
   "success": true,
-  "projectFilePath": "/Users/yigit/RiderProjects/EventHub/src/EventHub.Domain/EventHub.Domain.csproj",
+  "projectFilePath": "/Users/yigit/EventHub-Clean/EventHub-1/src/EventHub.Domain/EventHub.Domain.csproj",
   "expectedPackageFiles": [],
   "logs": []
 }
