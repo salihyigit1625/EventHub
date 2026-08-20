@@ -24,13 +24,23 @@ public class LocalFileStorageServiceTests
     }
 
     [Test]
-    public async Task Save_UsesOriginalFileName()
+    public async Task Save_UsesFileNameOnly()
     {
         var saved = await _storage.SaveAsync([1, 2, 3], "poster.png", "image/png");
 
         Assert.That(saved.StoredFileName, Is.EqualTo("poster.png"));
         Assert.That(File.Exists(Path.Combine(_root, "poster.png")), Is.True);
         Assert.That(saved.FileSizeInBytes, Is.EqualTo(3));
+    }
+
+    [Test]
+    public async Task Save_StripsDirectorySegments()
+    {
+        var saved = await _storage.SaveAsync([1], "sub/../../evil.png", "image/png");
+
+        Assert.That(saved.StoredFileName, Is.EqualTo("evil.png"));
+        Assert.That(File.Exists(Path.Combine(_root, "evil.png")), Is.True);
+        Assert.That(File.Exists(Path.GetFullPath(Path.Combine(_root, "..", "evil.png"))), Is.False);
     }
 
     [Test]
@@ -70,19 +80,29 @@ public class LocalFileStorageServiceTests
     }
 
     [Test]
-    public async Task Read_RelativeSegments_AreCombinedWithRoot()
+    public async Task Read_RelativeSegments_CannotEscapeRoot()
     {
+        await _storage.SaveAsync([1], "dummy.png", "image/png");
+
         var outside = Path.GetFullPath(Path.Combine(_root, "..", "secret.txt"));
         await File.WriteAllBytesAsync(outside, [42]);
         try
         {
-            var read = await _storage.ReadAsync(Path.Combine("..", "secret.txt"));
-            Assert.That(read.Content, Is.EqualTo(new byte[] { 42 }));
+            Assert.ThrowsAsync<FileNotFoundException>(async () =>
+                await _storage.ReadAsync(Path.Combine("..", "secret.txt")));
         }
         finally
         {
             if (File.Exists(outside))
                 File.Delete(outside);
         }
+    }
+
+    [Test]
+    public async Task Delete_RemovesFile()
+    {
+        await _storage.SaveAsync([1], "gone.png", "image/png");
+        await _storage.DeleteAsync("gone.png");
+        Assert.That(File.Exists(Path.Combine(_root, "gone.png")), Is.False);
     }
 }

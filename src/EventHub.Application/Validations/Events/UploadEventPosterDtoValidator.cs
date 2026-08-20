@@ -10,7 +10,6 @@ public class UploadEventPosterDtoValidator : AbstractValidator<UploadEventPoster
     {
         RuleFor(x => x.EventId).GreaterThan(0);
         RuleFor(x => x.OriginalFileName).NotEmpty().MaximumLength(255);
-        RuleFor(x => x.ContentType).NotEmpty().MaximumLength(100);
         RuleFor(x => x.Content)
             .NotEmpty()
             .Must(content => content.Length <= FileUploadDefaults.MaxFileSizeInBytes)

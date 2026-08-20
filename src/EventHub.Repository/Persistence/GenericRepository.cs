@@ -20,6 +20,25 @@ public class GenericRepository<T>(AppDbContext context) : IGenericRepository<T> 
         CancellationToken cancellationToken = default) =>
         await DbSet.AsNoTracking().Where(predicate).ToListAsync(cancellationToken);
 
+    public async Task<(IReadOnlyList<T> Items, int TotalCount)> FindPagedAsync<TKey>(
+        Expression<Func<T, bool>> predicate,
+        Expression<Func<T, TKey>> orderBy,
+        bool descending,
+        int skip,
+        int take,
+        CancellationToken cancellationToken = default)
+    {
+        var filtered = DbSet.AsNoTracking().Where(predicate);
+        var totalCount = await filtered.CountAsync(cancellationToken);
+
+        var ordered = descending
+            ? filtered.OrderByDescending(orderBy)
+            : filtered.OrderBy(orderBy);
+
+        var items = await ordered.Skip(skip).Take(take).ToListAsync(cancellationToken);
+        return (items, totalCount);
+    }
+
     public async Task<T?> FirstOrDefaultAsync(
         Expression<Func<T, bool>> predicate,
         CancellationToken cancellationToken = default) =>

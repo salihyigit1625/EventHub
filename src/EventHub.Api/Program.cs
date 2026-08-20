@@ -48,6 +48,36 @@ builder.Services.AddRateLimiter(options =>
                 PermitLimit = 60,
                 QueueLimit = 0
             }));
+
+    options.AddPolicy("events-strict", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            GetClientIp(httpContext),
+            _ => new FixedWindowRateLimiterOptions
+            {
+                Window = TimeSpan.FromMinutes(1),
+                PermitLimit = 20,
+                QueueLimit = 0
+            }));
+
+    options.AddPolicy("events-poster", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            GetClientIp(httpContext),
+            _ => new FixedWindowRateLimiterOptions
+            {
+                Window = TimeSpan.FromMinutes(1),
+                PermitLimit = 5,
+                QueueLimit = 0
+            }));
+
+    options.AddPolicy("events-relaxed", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            GetClientIp(httpContext),
+            _ => new FixedWindowRateLimiterOptions
+            {
+                Window = TimeSpan.FromMinutes(1),
+                PermitLimit = 60,
+                QueueLimit = 0
+            }));
 });
 
 static string GetClientIp(HttpContext context) =>

@@ -11,4 +11,6 @@ public interface IFileStorageService
     Task<(byte[] Content, string ContentType)> ReadAsync(
         string fileName,
         CancellationToken cancellationToken = default);
+
+    Task DeleteAsync(string fileName, CancellationToken cancellationToken = default);
 }

@@ -4,6 +4,7 @@ using EventHub.Application.DTOs.Events;
 using EventHub.Application.Interfaces.Events;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace EventHub.Api.Controllers;
 
@@ -13,6 +14,7 @@ public class TicketTypesController(ITicketTypeService ticketTypeService) : Contr
 {
     [HttpGet("events/{eventId:int}/ticket-types")]
     [AllowAnonymous]
+    [EnableRateLimiting("events-relaxed")]
     public async Task<ActionResult<IReadOnlyList<TicketTypeDto>>> GetByEvent(
         int eventId,
         CancellationToken cancellationToken)
@@ -24,6 +26,7 @@ public class TicketTypesController(ITicketTypeService ticketTypeService) : Contr
     [HttpPost("ticket-types")]
     [Authorize(Roles = AppRoles.Organizer)]
     [HasPermission(AppPermissions.TicketTypesManage)]
+    [EnableRateLimiting("events-strict")]
     public async Task<ActionResult<TicketTypeDto>> Create(
         [FromBody] CreateTicketTypeDto dto,
         CancellationToken cancellationToken)
@@ -35,6 +38,7 @@ public class TicketTypesController(ITicketTypeService ticketTypeService) : Contr
     [HttpPut("ticket-types/{id:int}")]
     [Authorize(Roles = AppRoles.Organizer)]
     [HasPermission(AppPermissions.TicketTypesManage)]
+    [EnableRateLimiting("events-strict")]
     public async Task<ActionResult<TicketTypeDto>> Update(
         int id,
         [FromBody] UpdateTicketTypeDto dto,

@@ -38,19 +38,27 @@ public sealed class FakeFileStorage : IFileStorageService
         string contentType,
         CancellationToken cancellationToken = default)
     {
-        var path = Path.Combine("uploads", originalFileName);
-        Files[originalFileName] = (content, contentType, path);
-        return Task.FromResult((originalFileName, path, contentType, (long)content.Length));
+        var safeName = Path.GetFileName(originalFileName);
+        var path = Path.Combine("uploads", safeName);
+        Files[safeName] = (content, contentType, path);
+        return Task.FromResult((safeName, path, contentType, (long)content.Length));
     }
 
     public Task<(byte[] Content, string ContentType)> ReadAsync(
         string fileName,
         CancellationToken cancellationToken = default)
     {
-        if (!Files.TryGetValue(fileName, out var stored))
+        var safeName = Path.GetFileName(fileName);
+        if (!Files.TryGetValue(safeName, out var stored))
             throw new FileNotFoundException(fileName);
 
         return Task.FromResult((stored.Content, stored.ContentType));
+    }
+
+    public Task DeleteAsync(string fileName, CancellationToken cancellationToken = default)
+    {
+        Files.Remove(Path.GetFileName(fileName));
+        return Task.CompletedTask;
     }
 }
 

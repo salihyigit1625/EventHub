@@ -15,7 +15,8 @@ public class TicketTypeServiceTests
     [Test]
     public async Task Create_SetsRemainingQuantityToTotal()
     {
-        var evt = _db.SeedEvent(status: EventStatus.Draft);
+        var evt = _db.SeedEvent(organizerId: 10, status: EventStatus.Draft);
+        _db.CurrentUser.UserId = 10;
 
         var dto = await _db.CreateTicketTypeService().CreateAsync(new CreateTicketTypeDto
         {
@@ -33,9 +34,29 @@ public class TicketTypeServiceTests
     }
 
     [Test]
+    public void Create_OtherOrganizer_Throws()
+    {
+        var evt = _db.SeedEvent(organizerId: 10, status: EventStatus.Draft);
+        _db.CurrentUser.UserId = 99;
+
+        Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            _db.CreateTicketTypeService().CreateAsync(new CreateTicketTypeDto
+            {
+                EventId = evt.Id,
+                Name = "GA",
+                Price = 10,
+                TotalQuantity = 1,
+                SaleStartDate = DateTime.UtcNow,
+                SaleEndDate = DateTime.UtcNow.AddDays(1)
+            }));
+    }
+
+    [Test]
     public void Create_CancelledEvent_Throws()
     {
-        var evt = _db.SeedEvent(status: EventStatus.Cancelled);
+        var evt = _db.SeedEvent(organizerId: 10, status: EventStatus.Cancelled);
+        _db.CurrentUser.UserId = 10;
+
         Assert.ThrowsAsync<InvalidOperationException>(() =>
             _db.CreateTicketTypeService().CreateAsync(new CreateTicketTypeDto
             {
@@ -51,6 +72,7 @@ public class TicketTypeServiceTests
     [Test]
     public void Create_UnknownEvent_Throws()
     {
+        _db.CurrentUser.UserId = 10;
         Assert.ThrowsAsync<KeyNotFoundException>(() =>
             _db.CreateTicketTypeService().CreateAsync(new CreateTicketTypeDto
             {
@@ -66,7 +88,8 @@ public class TicketTypeServiceTests
     [Test]
     public async Task Update_RecalculatesRemainingFromSoldCount()
     {
-        var evt = _db.SeedEvent();
+        var evt = _db.SeedEvent(organizerId: 10);
+        _db.CurrentUser.UserId = 10;
         var type = _db.SeedTicketType(evt.Id, remaining: 7, total: 10);
 
         var updated = await _db.CreateTicketTypeService().UpdateAsync(type.Id, new UpdateTicketTypeDto
@@ -83,9 +106,28 @@ public class TicketTypeServiceTests
     }
 
     [Test]
+    public void Update_OtherOrganizer_Throws()
+    {
+        var evt = _db.SeedEvent(organizerId: 10);
+        var type = _db.SeedTicketType(evt.Id, remaining: 7, total: 10);
+        _db.CurrentUser.UserId = 99;
+
+        Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            _db.CreateTicketTypeService().UpdateAsync(type.Id, new UpdateTicketTypeDto
+            {
+                Name = "Updated",
+                Price = 120m,
+                TotalQuantity = 20,
+                SaleStartDate = type.SaleStartDate,
+                SaleEndDate = type.SaleEndDate
+            }));
+    }
+
+    [Test]
     public void Update_TotalBelowSold_Throws()
     {
-        var evt = _db.SeedEvent();
+        var evt = _db.SeedEvent(organizerId: 10);
+        _db.CurrentUser.UserId = 10;
         var type = _db.SeedTicketType(evt.Id, remaining: 2, total: 10);
 
         Assert.ThrowsAsync<InvalidOperationException>(() =>
@@ -100,15 +142,36 @@ public class TicketTypeServiceTests
     }
 
     [Test]
-    public async Task GetByEventId_ReturnsOnlyMatchingTypes()
+    public async Task GetByEventId_Published_ReturnsTypes()
     {
-        var first = _db.SeedEvent();
-        var second = _db.SeedEvent();
+        var first = _db.SeedEvent(status: EventStatus.Published);
+        var second = _db.SeedEvent(status: EventStatus.Published);
         _db.SeedTicketType(first.Id);
         _db.SeedTicketType(first.Id);
         _db.SeedTicketType(second.Id);
 
         var list = await _db.CreateTicketTypeService().GetByEventIdAsync(first.Id);
         Assert.That(list, Has.Count.EqualTo(2));
+    }
+
+    [Test]
+    public void GetByEventId_Draft_Anonymous_Throws()
+    {
+        var evt = _db.SeedEvent(organizerId: 10, status: EventStatus.Draft);
+        _db.SeedTicketType(evt.Id);
+
+        Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            _db.CreateTicketTypeService().GetByEventIdAsync(evt.Id));
+    }
+
+    [Test]
+    public async Task GetByEventId_Draft_Owner_Returns()
+    {
+        var evt = _db.SeedEvent(organizerId: 10, status: EventStatus.Draft);
+        _db.SeedTicketType(evt.Id);
+        _db.CurrentUser.UserId = 10;
+
+        var list = await _db.CreateTicketTypeService().GetByEventIdAsync(evt.Id);
+        Assert.That(list, Has.Count.EqualTo(1));
     }
 }

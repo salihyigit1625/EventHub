@@ -78,7 +78,7 @@ public class DocumentServiceTests
     }
 
     [Test]
-    public void Download_CanReadArbitraryStoredNameFromRepository()
+    public void Download_TraversalStoredName_IsRejectedByStorageBasename()
     {
         _db.Documents.Seed(new Document
         {
@@ -88,11 +88,8 @@ public class DocumentServiceTests
         });
         _db.FileStorage.Files["../other/file.pdf"] = ([9], "application/pdf", "../other/file.pdf");
 
-        Assert.DoesNotThrowAsync(async () =>
-        {
-            var result = await _db.CreateDocumentService().DownloadAsync(_db.Documents.Items[0].Id);
-            Assert.That(result.Content, Is.EqualTo(new byte[] { 9 }));
-        });
+        Assert.ThrowsAsync<FileNotFoundException>(() =>
+            _db.CreateDocumentService().DownloadAsync(_db.Documents.Items[0].Id));
     }
 
     [Test]

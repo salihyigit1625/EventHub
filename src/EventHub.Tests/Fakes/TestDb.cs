@@ -68,7 +68,7 @@ public sealed class TestDb
         FileStorage,
         Mapper);
 
-    public TicketTypeService CreateTicketTypeService() => new(TicketTypes, Events, UnitOfWork, Mapper);
+    public TicketTypeService CreateTicketTypeService() => new(TicketTypes, Events, UnitOfWork, CurrentUser, Mapper);
 
     public TicketService CreateTicketService() => new(
         Tickets,
