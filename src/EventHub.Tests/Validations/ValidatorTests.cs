@@ -21,7 +21,7 @@ public class ValidatorTests
         var result = new RegisterAttendeeDtoValidator().Validate(new RegisterAttendeeDto
         {
             Email = "ada@eventhub.local",
-            Password = "123456",
+            Password = "Secret1!",
             FullName = "Ada"
         });
         Assert.That(result.IsValid, Is.True);
@@ -48,7 +48,7 @@ public class ValidatorTests
         var result = new RegisterOrganizerDtoValidator().Validate(new RegisterOrganizerDto
         {
             Email = "org@eventhub.local",
-            Password = "123456",
+            Password = "Secret1!",
             FullName = "Org",
             CompanyName = ""
         });
@@ -224,7 +224,7 @@ public class ValidatorTests
         var result = new CreateGateStaffDtoValidator().Validate(new CreateGateStaffDto
         {
             Email = "x",
-            Password = "123456",
+            Password = "Secret1!",
             FullName = "Gate"
         });
         Assert.That(result.IsValid, Is.False);
