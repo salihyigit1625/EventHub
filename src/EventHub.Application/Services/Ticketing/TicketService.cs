@@ -24,77 +24,77 @@ public class TicketService(
 {
     public async Task<TicketDto> PurchaseAsync(int ticketTypeId, CancellationToken cancellationToken = default)
     {
-        var attendeeId = currentUser.UserId
-            ?? throw new UnauthorizedAccessException("Authentication is required.");
-
-        var ticketType = await ticketTypeRepository.GetByIdAsync(ticketTypeId, cancellationToken)
-            ?? throw new KeyNotFoundException($"TicketType ({ticketTypeId}) was not found.");
-
-        var eventEntity = await eventRepository.GetByIdAsync(ticketType.EventId, cancellationToken)
-            ?? throw new KeyNotFoundException($"Event ({ticketType.EventId}) was not found.");
-
-        if (eventEntity.Status != EventStatus.Published)
-            throw new InvalidOperationException("Tickets can only be purchased for published events.");
-
-        var now = DateTime.UtcNow;
-        if (now >= eventEntity.StartDate)
-            throw new InvalidOperationException("Tickets cannot be purchased after the event has started.");
-
-        if (now < ticketType.SaleStartDate || now > ticketType.SaleEndDate)
-            throw new InvalidOperationException("This ticket type is not currently on sale.");
-
-        if (ticketType.RemainingQuantity <= 0)
-            throw new InvalidOperationException("This ticket type is sold out.");
-
-        var attendee = await attendeeRepository.GetByIdAsync(attendeeId, cancellationToken)
-            ?? throw new KeyNotFoundException($"AttendeeProfile ({attendeeId}) was not found.");
-
-        if (attendee.WalletBalance < ticketType.Price)
-            throw new InvalidOperationException("Insufficient wallet balance.");
-
-        ticketType.RemainingQuantity--;
-        WalletBalanceGuard.Debit(attendee, ticketType.Price);
-
-        var ticket = new Ticket
+        return await unitOfWork.ExecuteInTransactionAsync(async ct =>
         {
-            TicketTypeId = ticketType.Id,
-            AttendeeId = attendeeId,
-            UniqueCode = Guid.NewGuid().ToString("N"),
-            UnitPrice = ticketType.Price,
-            Status = TicketStatus.Paid,
-            PurchasedAt = now
-        };
+            var attendeeId = currentUser.UserId
+                ?? throw new UnauthorizedAccessException("Authentication is required.");
 
-        await ticketRepository.AddAsync(ticket, cancellationToken);
-        ticketTypeRepository.Update(ticketType);
-        attendeeRepository.Update(attendee);
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+            var ticketType = await ticketTypeRepository.GetByIdAsync(ticketTypeId, ct)
+                ?? throw new KeyNotFoundException($"TicketType ({ticketTypeId}) was not found.");
 
-        var payment = new Payment
-        {
-            TicketId = ticket.Id,
-            AttendeeId = attendeeId,
-            Amount = ticketType.Price,
-            Status = PaymentStatus.Completed,
-            TransactionCode = Guid.NewGuid().ToString("N")
-        };
+            var eventEntity = await eventRepository.GetByIdAsync(ticketType.EventId, ct)
+                ?? throw new KeyNotFoundException($"Event ({ticketType.EventId}) was not found.");
 
-        await paymentRepository.AddAsync(payment, cancellationToken);
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+            if (eventEntity.Status != EventStatus.Published)
+                throw new InvalidOperationException("Tickets can only be purchased for published events.");
 
-        await walletTransactionRepository.AddAsync(new WalletTransaction
-        {
-            AttendeeId = attendeeId,
-            Amount = ticketType.Price,
-            BalanceAfter = attendee.WalletBalance,
-            Type = WalletTransactionType.Purchase,
-            PaymentId = payment.Id,
-            TicketId = ticket.Id
+            var now = DateTime.UtcNow;
+            if (now >= eventEntity.StartDate)
+                throw new InvalidOperationException("Tickets cannot be purchased after the event has started.");
+
+            if (now < ticketType.SaleStartDate || now > ticketType.SaleEndDate)
+                throw new InvalidOperationException("This ticket type is not currently on sale.");
+
+            if (ticketType.RemainingQuantity <= 0)
+                throw new InvalidOperationException("This ticket type is sold out.");
+
+            var attendee = await attendeeRepository.GetByIdAsync(attendeeId, ct)
+                ?? throw new KeyNotFoundException($"AttendeeProfile ({attendeeId}) was not found.");
+
+            ticketType.RemainingQuantity--;
+            WalletBalanceGuard.Debit(attendee, ticketType.Price);
+
+            var ticket = new Ticket
+            {
+                TicketTypeId = ticketType.Id,
+                AttendeeId = attendeeId,
+                UniqueCode = Guid.NewGuid().ToString("N"),
+                UnitPrice = ticketType.Price,
+                Status = TicketStatus.Paid,
+                PurchasedAt = now
+            };
+
+            await ticketRepository.AddAsync(ticket, ct);
+            ticketTypeRepository.Update(ticketType);
+            attendeeRepository.Update(attendee);
+            await unitOfWork.SaveChangesAsync(ct);
+
+            var payment = new Payment
+            {
+                TicketId = ticket.Id,
+                AttendeeId = attendeeId,
+                Amount = ticketType.Price,
+                Status = PaymentStatus.Completed,
+                TransactionCode = Guid.NewGuid().ToString("N")
+            };
+
+            await paymentRepository.AddAsync(payment, ct);
+            await unitOfWork.SaveChangesAsync(ct);
+
+            await walletTransactionRepository.AddAsync(new WalletTransaction
+            {
+                AttendeeId = attendeeId,
+                Amount = ticketType.Price,
+                BalanceAfter = attendee.WalletBalance,
+                Type = WalletTransactionType.Purchase,
+                PaymentId = payment.Id,
+                TicketId = ticket.Id
+            }, ct);
+
+            await unitOfWork.SaveChangesAsync(ct);
+
+            return mapper.Map<TicketDto>(ticket);
         }, cancellationToken);
-
-        await unitOfWork.SaveChangesAsync(cancellationToken);
-
-        return mapper.Map<TicketDto>(ticket);
     }
 
     public async Task<TicketDto> CancelAsync(int ticketId, CancellationToken cancellationToken = default)

@@ -205,8 +205,32 @@ public class EventServiceTests
         Assert.That(evt.Status, Is.EqualTo(EventStatus.Cancelled));
         Assert.That(ticket.Status, Is.EqualTo(TicketStatus.Refunded));
         Assert.That(attendee.WalletBalance, Is.EqualTo(150m));
+        Assert.That(type.RemainingQuantity, Is.EqualTo(10));
         Assert.That(_db.Payments.Items.Single().Status, Is.EqualTo(PaymentStatus.Refunded));
         Assert.That(_db.WalletTransactions.Items.Single().Type, Is.EqualTo(WalletTransactionType.Refund));
+    }
+
+    [Test]
+    public async Task Cancel_RefundsCheckedInTicketsAndRestoresStock()
+    {
+        var evt = _db.SeedEvent(organizerId: 10, status: EventStatus.Published);
+        _db.CurrentUser.UserId = 10;
+        var type = _db.SeedTicketType(evt.Id, remaining: 8, total: 10);
+        var attendee = _db.SeedAttendee(20, 0m);
+        var ticket = _db.SeedTicket(type.Id, attendee.UserId, TicketStatus.CheckedIn, price: 100m);
+        _db.Payments.Seed(new Payment
+        {
+            TicketId = ticket.Id,
+            AttendeeId = attendee.UserId,
+            Amount = 100m,
+            Status = PaymentStatus.Completed
+        });
+
+        await _db.CreateEventService().CancelAsync(evt.Id);
+
+        Assert.That(ticket.Status, Is.EqualTo(TicketStatus.Refunded));
+        Assert.That(attendee.WalletBalance, Is.EqualTo(100m));
+        Assert.That(type.RemainingQuantity, Is.EqualTo(9));
     }
 
     [Test]

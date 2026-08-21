@@ -38,6 +38,7 @@ public class GateStaffService(
         var (isSuccessful, failureReason, ticketId) = await EvaluateAsync(
             ticket,
             profile.AssignedEventId,
+            now,
             cancellationToken);
 
         if (isSuccessful && ticket is not null)
@@ -101,6 +102,7 @@ public class GateStaffService(
     private async Task<(bool IsSuccessful, string? FailureReason, int? TicketId)> EvaluateAsync(
         Ticket? ticket,
         int? assignedEventId,
+        DateTime now,
         CancellationToken cancellationToken)
     {
         if (ticket is null)
@@ -122,6 +124,12 @@ public class GateStaffService(
 
         if (eventEntity.Status is EventStatus.Cancelled or EventStatus.Completed)
             return (false, "Event is not open for check-in.", ticket.Id);
+
+        if (now < eventEntity.StartDate)
+            return (false, "Check-in has not opened yet.", ticket.Id);
+
+        if (now > eventEntity.EndDate)
+            return (false, "Check-in window has closed.", ticket.Id);
 
         return ticket.Status switch
         {

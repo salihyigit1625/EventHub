@@ -17,7 +17,7 @@ public class GateStaffServiceTests
     [Test]
     public async Task CheckIn_PaidTicketForAssignedEvent_Succeeds()
     {
-        var evt = _db.SeedEvent();
+        var evt = _db.SeedEvent(start: DateTime.UtcNow.AddHours(-1));
         var type = _db.SeedTicketType(evt.Id);
         var ticket = _db.SeedTicket(type.Id, 20, code: "SCANME");
         _db.CurrentUser.UserId = 30;
@@ -39,7 +39,7 @@ public class GateStaffServiceTests
     [Test]
     public async Task CheckIn_WrongAssignedEvent_Fails()
     {
-        var evt = _db.SeedEvent();
+        var evt = _db.SeedEvent(start: DateTime.UtcNow.AddHours(-1));
         var type = _db.SeedTicketType(evt.Id);
         var ticket = _db.SeedTicket(type.Id, 20, code: "SCANME");
         _db.CurrentUser.UserId = 30;
@@ -59,7 +59,7 @@ public class GateStaffServiceTests
     [Test]
     public async Task CheckIn_NoAssignment_Fails()
     {
-        var evt = _db.SeedEvent();
+        var evt = _db.SeedEvent(start: DateTime.UtcNow.AddHours(-1));
         var type = _db.SeedTicketType(evt.Id);
         _db.SeedTicket(type.Id, 20, code: "SCANME");
         _db.CurrentUser.UserId = 30;
@@ -77,7 +77,7 @@ public class GateStaffServiceTests
     [Test]
     public async Task CheckIn_CancelledEvent_Fails()
     {
-        var evt = _db.SeedEvent(status: EventStatus.Cancelled);
+        var evt = _db.SeedEvent(start: DateTime.UtcNow.AddHours(-1), status: EventStatus.Cancelled);
         var type = _db.SeedTicketType(evt.Id);
         var ticket = _db.SeedTicket(type.Id, 20, code: "SCANME");
         _db.CurrentUser.UserId = 30;
@@ -93,13 +93,46 @@ public class GateStaffServiceTests
         Assert.That(ticket.Status, Is.EqualTo(TicketStatus.Paid));
     }
 
+    [Test]
+    public async Task CheckIn_BeforeStart_Fails()
+    {
+        var evt = _db.SeedEvent(start: DateTime.UtcNow.AddHours(2));
+        var type = _db.SeedTicketType(evt.Id);
+        var ticket = _db.SeedTicket(type.Id, 20, code: "SCANME");
+        _db.CurrentUser.UserId = 30;
+        _db.GateStaff.Seed(new GateStaffProfile { UserId = 30, AssignedEventId = evt.Id });
+
+        var result = await _db.CreateGateStaffService().CheckInAsync(new CheckInTicketDto { UniqueCode = "SCANME" });
+
+        Assert.That(result.IsSuccessful, Is.False);
+        Assert.That(result.FailureReason, Is.EqualTo("Check-in has not opened yet."));
+        Assert.That(ticket.Status, Is.EqualTo(TicketStatus.Paid));
+    }
+
+    [Test]
+    public async Task CheckIn_AfterEnd_Fails()
+    {
+        var evt = _db.SeedEvent(start: DateTime.UtcNow.AddHours(-10));
+        evt.EndDate = DateTime.UtcNow.AddHours(-1);
+        var type = _db.SeedTicketType(evt.Id);
+        var ticket = _db.SeedTicket(type.Id, 20, code: "SCANME");
+        _db.CurrentUser.UserId = 30;
+        _db.GateStaff.Seed(new GateStaffProfile { UserId = 30, AssignedEventId = evt.Id });
+
+        var result = await _db.CreateGateStaffService().CheckInAsync(new CheckInTicketDto { UniqueCode = "SCANME" });
+
+        Assert.That(result.IsSuccessful, Is.False);
+        Assert.That(result.FailureReason, Is.EqualTo("Check-in window has closed."));
+        Assert.That(ticket.Status, Is.EqualTo(TicketStatus.Paid));
+    }
+
     [TestCase(TicketStatus.CheckedIn, "Ticket has already been checked in.")]
     [TestCase(TicketStatus.Cancelled, "Ticket has been cancelled.")]
     [TestCase(TicketStatus.Refunded, "Ticket has been refunded.")]
     [TestCase(TicketStatus.Reserved, "Ticket has not been paid.")]
     public async Task CheckIn_InvalidStatus_FailsAndLogs(TicketStatus status, string reason)
     {
-        var evt = _db.SeedEvent();
+        var evt = _db.SeedEvent(start: DateTime.UtcNow.AddHours(-1));
         var type = _db.SeedTicketType(evt.Id);
         var ticket = _db.SeedTicket(type.Id, 20, status, code: "CODE");
         _db.CurrentUser.UserId = 30;

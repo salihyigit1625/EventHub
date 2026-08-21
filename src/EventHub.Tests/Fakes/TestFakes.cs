@@ -18,6 +18,11 @@ public sealed class FakeUnitOfWork : IUnitOfWork
         return Task.FromResult(1);
     }
 
+    public Task<TResult> ExecuteInTransactionAsync<TResult>(
+        Func<CancellationToken, Task<TResult>> action,
+        CancellationToken cancellationToken = default) =>
+        action(cancellationToken);
+
     public void Dispose()
     {
     }

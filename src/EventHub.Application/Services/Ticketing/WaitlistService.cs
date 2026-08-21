@@ -40,8 +40,12 @@ public class WaitlistService(
         if (eventEntity.Status != EventStatus.Published)
             throw new InvalidOperationException("Waitlist is only available for published events.");
 
-        if (DateTime.UtcNow >= eventEntity.StartDate)
+        var now = DateTime.UtcNow;
+        if (now >= eventEntity.StartDate)
             throw new InvalidOperationException("Waitlist is not available after the event has started.");
+
+        if (now < ticketType.SaleStartDate || now > ticketType.SaleEndDate)
+            throw new InvalidOperationException("This ticket type is not currently on sale.");
 
         if (await waitlistRepository.AnyAsync(
                 w => w.TicketTypeId == ticketTypeId
@@ -56,7 +60,7 @@ public class WaitlistService(
             TicketTypeId = ticketTypeId,
             AttendeeId = attendeeId,
             Status = WaitlistStatus.Waiting,
-            RequestedAt = DateTime.UtcNow
+            RequestedAt = now
         };
 
         await waitlistRepository.AddAsync(entry, cancellationToken);
@@ -67,93 +71,99 @@ public class WaitlistService(
 
     public async Task<TicketDto> ConvertAsync(int waitlistId, CancellationToken cancellationToken = default)
     {
-        var attendeeId = currentUser.UserId
-            ?? throw new UnauthorizedAccessException("Authentication is required.");
-
-        var entry = await waitlistRepository.GetByIdAsync(waitlistId, cancellationToken)
-            ?? throw new KeyNotFoundException($"Waitlist ({waitlistId}) was not found.");
-
-        if (entry.AttendeeId != attendeeId)
-            throw new KeyNotFoundException($"Waitlist ({waitlistId}) was not found.");
-
-        if (entry.Status != WaitlistStatus.Notified)
-            throw new InvalidOperationException("Only notified waitlist entries can be converted.");
-
-        if (entry.ExpiresAt is not null && entry.ExpiresAt < DateTime.UtcNow)
+        return await unitOfWork.ExecuteInTransactionAsync(async ct =>
         {
-            entry.Status = WaitlistStatus.Expired;
+            var attendeeId = currentUser.UserId
+                ?? throw new UnauthorizedAccessException("Authentication is required.");
+
+            var entry = await waitlistRepository.GetByIdAsync(waitlistId, ct)
+                ?? throw new KeyNotFoundException($"Waitlist ({waitlistId}) was not found.");
+
+            if (entry.AttendeeId != attendeeId)
+                throw new KeyNotFoundException($"Waitlist ({waitlistId}) was not found.");
+
+            if (entry.Status != WaitlistStatus.Notified)
+                throw new InvalidOperationException("Only notified waitlist entries can be converted.");
+
+            var now = DateTime.UtcNow;
+            if (entry.ExpiresAt is not null && entry.ExpiresAt < now)
+            {
+                entry.Status = WaitlistStatus.Expired;
+                waitlistRepository.Update(entry);
+
+                var heldType = await ticketTypeRepository.GetByIdAsync(entry.TicketTypeId, ct);
+                if (heldType is not null)
+                {
+                    heldType.RemainingQuantity++;
+                    ticketTypeRepository.Update(heldType);
+                }
+
+                await unitOfWork.SaveChangesAsync(ct);
+                throw new InvalidOperationException("This waitlist offer has expired.");
+            }
+
+            var ticketType = await ticketTypeRepository.GetByIdAsync(entry.TicketTypeId, ct)
+                ?? throw new KeyNotFoundException($"TicketType ({entry.TicketTypeId}) was not found.");
+
+            var eventEntity = await eventRepository.GetByIdAsync(ticketType.EventId, ct)
+                ?? throw new KeyNotFoundException($"Event ({ticketType.EventId}) was not found.");
+
+            if (eventEntity.Status != EventStatus.Published)
+                throw new InvalidOperationException("Tickets can only be purchased for published events.");
+
+            if (now >= eventEntity.StartDate)
+                throw new InvalidOperationException("Tickets cannot be purchased after the event has started.");
+
+            if (now < ticketType.SaleStartDate || now > ticketType.SaleEndDate)
+                throw new InvalidOperationException("This ticket type is not currently on sale.");
+
+            var attendee = await attendeeRepository.GetByIdAsync(entry.AttendeeId, ct)
+                ?? throw new KeyNotFoundException($"AttendeeProfile ({entry.AttendeeId}) was not found.");
+
+            WalletBalanceGuard.Debit(attendee, ticketType.Price);
+            entry.Status = WaitlistStatus.Converted;
+
+            var ticket = new Ticket
+            {
+                TicketTypeId = ticketType.Id,
+                AttendeeId = entry.AttendeeId,
+                UniqueCode = Guid.NewGuid().ToString("N"),
+                UnitPrice = ticketType.Price,
+                Status = TicketStatus.Paid,
+                PurchasedAt = now
+            };
+
+            await ticketRepository.AddAsync(ticket, ct);
+            attendeeRepository.Update(attendee);
             waitlistRepository.Update(entry);
-            await unitOfWork.SaveChangesAsync(cancellationToken);
-            throw new InvalidOperationException("This waitlist offer has expired.");
-        }
+            await unitOfWork.SaveChangesAsync(ct);
 
-        var ticketType = await ticketTypeRepository.GetByIdAsync(entry.TicketTypeId, cancellationToken)
-            ?? throw new KeyNotFoundException($"TicketType ({entry.TicketTypeId}) was not found.");
+            var payment = new Payment
+            {
+                TicketId = ticket.Id,
+                AttendeeId = entry.AttendeeId,
+                Amount = ticketType.Price,
+                Status = PaymentStatus.Completed,
+                TransactionCode = Guid.NewGuid().ToString("N")
+            };
 
-        var eventEntity = await eventRepository.GetByIdAsync(ticketType.EventId, cancellationToken)
-            ?? throw new KeyNotFoundException($"Event ({ticketType.EventId}) was not found.");
+            await paymentRepository.AddAsync(payment, ct);
+            await unitOfWork.SaveChangesAsync(ct);
 
-        if (eventEntity.Status != EventStatus.Published)
-            throw new InvalidOperationException("Tickets can only be purchased for published events.");
+            await walletTransactionRepository.AddAsync(new WalletTransaction
+            {
+                AttendeeId = entry.AttendeeId,
+                Amount = ticketType.Price,
+                BalanceAfter = attendee.WalletBalance,
+                Type = WalletTransactionType.Purchase,
+                PaymentId = payment.Id,
+                TicketId = ticket.Id
+            }, ct);
 
-        if (DateTime.UtcNow >= eventEntity.StartDate)
-            throw new InvalidOperationException("Tickets cannot be purchased after the event has started.");
+            await unitOfWork.SaveChangesAsync(ct);
 
-        if (ticketType.RemainingQuantity <= 0)
-            throw new InvalidOperationException("This ticket type is still sold out.");
-
-        var attendee = await attendeeRepository.GetByIdAsync(entry.AttendeeId, cancellationToken)
-            ?? throw new KeyNotFoundException($"AttendeeProfile ({entry.AttendeeId}) was not found.");
-
-        if (attendee.WalletBalance < ticketType.Price)
-            throw new InvalidOperationException("Insufficient wallet balance.");
-
-        var now = DateTime.UtcNow;
-        ticketType.RemainingQuantity--;
-        WalletBalanceGuard.Debit(attendee, ticketType.Price);
-        entry.Status = WaitlistStatus.Converted;
-
-        var ticket = new Ticket
-        {
-            TicketTypeId = ticketType.Id,
-            AttendeeId = entry.AttendeeId,
-            UniqueCode = Guid.NewGuid().ToString("N"),
-            UnitPrice = ticketType.Price,
-            Status = TicketStatus.Paid,
-            PurchasedAt = now
-        };
-
-        await ticketRepository.AddAsync(ticket, cancellationToken);
-        ticketTypeRepository.Update(ticketType);
-        attendeeRepository.Update(attendee);
-        waitlistRepository.Update(entry);
-        await unitOfWork.SaveChangesAsync(cancellationToken);
-
-        var payment = new Payment
-        {
-            TicketId = ticket.Id,
-            AttendeeId = entry.AttendeeId,
-            Amount = ticketType.Price,
-            Status = PaymentStatus.Completed,
-            TransactionCode = Guid.NewGuid().ToString("N")
-        };
-
-        await paymentRepository.AddAsync(payment, cancellationToken);
-        await unitOfWork.SaveChangesAsync(cancellationToken);
-
-        await walletTransactionRepository.AddAsync(new WalletTransaction
-        {
-            AttendeeId = entry.AttendeeId,
-            Amount = ticketType.Price,
-            BalanceAfter = attendee.WalletBalance,
-            Type = WalletTransactionType.Purchase,
-            PaymentId = payment.Id,
-            TicketId = ticket.Id
+            return mapper.Map<TicketDto>(ticket);
         }, cancellationToken);
-
-        await unitOfWork.SaveChangesAsync(cancellationToken);
-
-        return mapper.Map<TicketDto>(ticket);
     }
 
     public async Task<WaitlistDto> NotifyNextAsync(int ticketTypeId, CancellationToken cancellationToken = default)
@@ -166,20 +176,22 @@ public class WaitlistService(
 
         EventOwnership.EnsureOwnedBy(eventEntity, currentUser.UserId);
 
-        if (ticketType.RemainingQuantity <= 0)
-            throw new InvalidOperationException("There are no available tickets to offer.");
-
         var entries = await waitlistRepository.FindAsync(w => w.TicketTypeId == ticketTypeId, cancellationToken);
         var now = DateTime.UtcNow;
 
-        foreach (var expired in entries.Where(e => e.Status == WaitlistStatus.Notified && e.ExpiresAt < now))
+        foreach (var expired in entries.Where(e =>
+                     e.Status == WaitlistStatus.Notified && e.ExpiresAt is not null && e.ExpiresAt < now))
         {
             expired.Status = WaitlistStatus.Expired;
+            ticketType.RemainingQuantity++;
             waitlistRepository.Update(expired);
         }
 
         if (entries.Any(e => e.Status == WaitlistStatus.Notified && (e.ExpiresAt is null || e.ExpiresAt >= now)))
             throw new InvalidOperationException("Another attendee already has an active waitlist offer.");
+
+        if (ticketType.RemainingQuantity <= 0)
+            throw new InvalidOperationException("There are no available tickets to offer.");
 
         var next = entries
             .Where(e => e.Status == WaitlistStatus.Waiting)
@@ -187,9 +199,12 @@ public class WaitlistService(
             .FirstOrDefault()
             ?? throw new InvalidOperationException("There is nobody waiting for this ticket type.");
 
+        ticketType.RemainingQuantity--;
         next.Status = WaitlistStatus.Notified;
         next.NotifiedAt = now;
         next.ExpiresAt = now.AddMinutes(30);
+
+        ticketTypeRepository.Update(ticketType);
         waitlistRepository.Update(next);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
