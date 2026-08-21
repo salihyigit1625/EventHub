@@ -15,13 +15,13 @@ public class GateStaffServiceTests
     public void SetUp() => _db = new TestDb();
 
     [Test]
-    public async Task CheckIn_PaidTicket_SucceedsRegardlessOfAssignedEvent()
+    public async Task CheckIn_PaidTicketForAssignedEvent_Succeeds()
     {
         var evt = _db.SeedEvent();
         var type = _db.SeedTicketType(evt.Id);
         var ticket = _db.SeedTicket(type.Id, 20, code: "SCANME");
         _db.CurrentUser.UserId = 30;
-        _db.GateStaff.Seed(new GateStaffProfile { UserId = 30, AssignedEventId = 999 });
+        _db.GateStaff.Seed(new GateStaffProfile { UserId = 30, AssignedEventId = evt.Id });
 
         var result = await _db.CreateGateStaffService().CheckInAsync(new CheckInTicketDto
         {
@@ -36,14 +36,74 @@ public class GateStaffServiceTests
         Assert.That(_db.CheckInLogs.Items.Single().DeviceLocation, Is.EqualTo("Gate A"));
     }
 
+    [Test]
+    public async Task CheckIn_WrongAssignedEvent_Fails()
+    {
+        var evt = _db.SeedEvent();
+        var type = _db.SeedTicketType(evt.Id);
+        var ticket = _db.SeedTicket(type.Id, 20, code: "SCANME");
+        _db.CurrentUser.UserId = 30;
+        _db.GateStaff.Seed(new GateStaffProfile { UserId = 30, AssignedEventId = 999 });
+
+        var result = await _db.CreateGateStaffService().CheckInAsync(new CheckInTicketDto
+        {
+            UniqueCode = "SCANME"
+        });
+
+        Assert.That(result.IsSuccessful, Is.False);
+        Assert.That(result.FailureReason, Is.EqualTo("Ticket does not belong to the assigned event."));
+        Assert.That(ticket.Status, Is.EqualTo(TicketStatus.Paid));
+        Assert.That(_db.CheckInLogs.Items.Single().IsSuccessful, Is.False);
+    }
+
+    [Test]
+    public async Task CheckIn_NoAssignment_Fails()
+    {
+        var evt = _db.SeedEvent();
+        var type = _db.SeedTicketType(evt.Id);
+        _db.SeedTicket(type.Id, 20, code: "SCANME");
+        _db.CurrentUser.UserId = 30;
+        _db.GateStaff.Seed(new GateStaffProfile { UserId = 30, AssignedEventId = null });
+
+        var result = await _db.CreateGateStaffService().CheckInAsync(new CheckInTicketDto
+        {
+            UniqueCode = "SCANME"
+        });
+
+        Assert.That(result.IsSuccessful, Is.False);
+        Assert.That(result.FailureReason, Is.EqualTo("Gate staff is not assigned to an event."));
+    }
+
+    [Test]
+    public async Task CheckIn_CancelledEvent_Fails()
+    {
+        var evt = _db.SeedEvent(status: EventStatus.Cancelled);
+        var type = _db.SeedTicketType(evt.Id);
+        var ticket = _db.SeedTicket(type.Id, 20, code: "SCANME");
+        _db.CurrentUser.UserId = 30;
+        _db.GateStaff.Seed(new GateStaffProfile { UserId = 30, AssignedEventId = evt.Id });
+
+        var result = await _db.CreateGateStaffService().CheckInAsync(new CheckInTicketDto
+        {
+            UniqueCode = "SCANME"
+        });
+
+        Assert.That(result.IsSuccessful, Is.False);
+        Assert.That(result.FailureReason, Is.EqualTo("Event is not open for check-in."));
+        Assert.That(ticket.Status, Is.EqualTo(TicketStatus.Paid));
+    }
+
     [TestCase(TicketStatus.CheckedIn, "Ticket has already been checked in.")]
     [TestCase(TicketStatus.Cancelled, "Ticket has been cancelled.")]
     [TestCase(TicketStatus.Refunded, "Ticket has been refunded.")]
     [TestCase(TicketStatus.Reserved, "Ticket has not been paid.")]
     public async Task CheckIn_InvalidStatus_FailsAndLogs(TicketStatus status, string reason)
     {
-        var ticket = _db.SeedTicket(1, 20, status, code: "CODE");
+        var evt = _db.SeedEvent();
+        var type = _db.SeedTicketType(evt.Id);
+        var ticket = _db.SeedTicket(type.Id, 20, status, code: "CODE");
         _db.CurrentUser.UserId = 30;
+        _db.GateStaff.Seed(new GateStaffProfile { UserId = 30, AssignedEventId = evt.Id });
 
         var result = await _db.CreateGateStaffService().CheckInAsync(new CheckInTicketDto { UniqueCode = "CODE" });
 
@@ -58,12 +118,22 @@ public class GateStaffServiceTests
     public async Task CheckIn_UnknownCode_FailsWithoutTicketId()
     {
         _db.CurrentUser.UserId = 30;
+        _db.GateStaff.Seed(new GateStaffProfile { UserId = 30, AssignedEventId = 1 });
+
         var result = await _db.CreateGateStaffService().CheckInAsync(new CheckInTicketDto { UniqueCode = "NOPE" });
 
         Assert.That(result.IsSuccessful, Is.False);
         Assert.That(result.FailureReason, Is.EqualTo("Ticket was not found."));
         Assert.That(result.TicketId, Is.Null);
         Assert.That(_db.CheckInLogs.Items.Single().TicketId, Is.Null);
+    }
+
+    [Test]
+    public void CheckIn_MissingProfile_Throws()
+    {
+        _db.CurrentUser.UserId = 30;
+        Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            _db.CreateGateStaffService().CheckInAsync(new CheckInTicketDto { UniqueCode = "X" }));
     }
 
     [Test]

@@ -15,6 +15,7 @@ public static class DbSeeder
         {
             await EnsureMissingPermissionsAsync(db, cancellationToken);
             await RevokeAttendeeDocumentsDownloadAsync(db, cancellationToken);
+            await RevokeNonAdminOrganizersViewAsync(db, cancellationToken);
             return;
         }
 
@@ -45,7 +46,6 @@ public static class DbSeeder
             AppPermissions.TicketTypesManage,
             AppPermissions.DocumentsUpload,
             AppPermissions.DocumentsDownload,
-            AppPermissions.OrganizersView,
             AppPermissions.OrganizersUpdate,
             AppPermissions.WaitlistNotify);
         Grant(attendeeRole,
@@ -56,8 +56,7 @@ public static class DbSeeder
             AppPermissions.WaitlistConvert,
             AppPermissions.WalletView,
             AppPermissions.WalletDeposit,
-            AppPermissions.PaymentsView,
-            AppPermissions.OrganizersView);
+            AppPermissions.PaymentsView);
         Grant(gateStaffRole,
             AppPermissions.TicketsCheckIn,
             AppPermissions.TicketsView);
@@ -157,6 +156,35 @@ public static class DbSeeder
 
         var links = await db.RolePermissions
             .Where(rp => rp.RoleId == attendeeRole.Id && rp.PermissionId == permission.Id)
+            .ToListAsync(cancellationToken);
+
+        if (links.Count == 0)
+            return;
+
+        db.RolePermissions.RemoveRange(links);
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
+    private static async Task RevokeNonAdminOrganizersViewAsync(
+        AppDbContext db,
+        CancellationToken cancellationToken)
+    {
+        var permission = await db.Permissions.FirstOrDefaultAsync(
+            p => p.Code == AppPermissions.OrganizersView,
+            cancellationToken);
+        if (permission is null)
+            return;
+
+        var nonAdminRoleIds = await db.Roles
+            .Where(r => r.Name != AppRoles.Admin)
+            .Select(r => r.Id)
+            .ToListAsync(cancellationToken);
+
+        if (nonAdminRoleIds.Count == 0)
+            return;
+
+        var links = await db.RolePermissions
+            .Where(rp => rp.PermissionId == permission.Id && nonAdminRoleIds.Contains(rp.RoleId))
             .ToListAsync(cancellationToken);
 
         if (links.Count == 0)

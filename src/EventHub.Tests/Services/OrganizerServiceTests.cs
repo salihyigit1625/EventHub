@@ -12,10 +12,9 @@ public class OrganizerServiceTests
     public void SetUp() => _db = new TestDb();
 
     [Test]
-    public async Task GetProfile_DoesNotRequireCallerToOwnTheUserId()
+    public async Task GetProfile_ReturnsOrganizerByUserId()
     {
         _db.SeedApprovedOrganizer(10, "Acme");
-        _db.CurrentUser.UserId = 99;
 
         var dto = await _db.CreateOrganizerService().GetProfileAsync(10);
 

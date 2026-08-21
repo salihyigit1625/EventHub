@@ -1,12 +1,8 @@
 using EventHub.Application.DTOs.Profiles;
 using EventHub.Application.DTOs.Ticketing;
-using EventHub.Application.Interfaces.Persistence;
 using EventHub.Application.Interfaces.Identity;
-using EventHub.Application.Interfaces.Events;
+using EventHub.Application.Interfaces.Persistence;
 using EventHub.Application.Interfaces.Profiles;
-using EventHub.Application.Interfaces.Ticketing;
-using EventHub.Application.Interfaces.Admin;
-using EventHub.Application.Interfaces.Storage;
 using EventHub.Domain.Entities.Events;
 using EventHub.Domain.Entities.Identity;
 using EventHub.Domain.Entities.Profiles;
@@ -17,6 +13,7 @@ namespace EventHub.Application.Services.Profiles;
 
 public class GateStaffService(
     IGenericRepository<Ticket> ticketRepository,
+    IGenericRepository<TicketType> ticketTypeRepository,
     IGenericRepository<CheckInLog> checkInLogRepository,
     IGenericRepository<GateStaffProfile> gateStaffRepository,
     IGenericRepository<User> userRepository,
@@ -34,8 +31,14 @@ public class GateStaffService(
         var scannedCode = dto.UniqueCode.Trim();
         var now = DateTime.UtcNow;
 
+        var profile = await gateStaffRepository.GetByIdAsync(gateStaffId, cancellationToken)
+            ?? throw new KeyNotFoundException($"GateStaffProfile ({gateStaffId}) was not found.");
+
         var ticket = await ticketRepository.FirstOrDefaultAsync(t => t.UniqueCode == scannedCode, cancellationToken);
-        var (isSuccessful, failureReason, ticketId) = Evaluate(ticket);
+        var (isSuccessful, failureReason, ticketId) = await EvaluateAsync(
+            ticket,
+            profile.AssignedEventId,
+            cancellationToken);
 
         if (isSuccessful && ticket is not null)
         {
@@ -95,10 +98,30 @@ public class GateStaffService(
         };
     }
 
-    private static (bool IsSuccessful, string? FailureReason, int? TicketId) Evaluate(Ticket? ticket)
+    private async Task<(bool IsSuccessful, string? FailureReason, int? TicketId)> EvaluateAsync(
+        Ticket? ticket,
+        int? assignedEventId,
+        CancellationToken cancellationToken)
     {
         if (ticket is null)
             return (false, "Ticket was not found.", null);
+
+        if (assignedEventId is null)
+            return (false, "Gate staff is not assigned to an event.", ticket.Id);
+
+        var ticketType = await ticketTypeRepository.GetByIdAsync(ticket.TicketTypeId, cancellationToken);
+        if (ticketType is null)
+            return (false, "Ticket type was not found.", ticket.Id);
+
+        if (ticketType.EventId != assignedEventId.Value)
+            return (false, "Ticket does not belong to the assigned event.", ticket.Id);
+
+        var eventEntity = await eventRepository.GetByIdAsync(ticketType.EventId, cancellationToken);
+        if (eventEntity is null)
+            return (false, "Event was not found.", ticket.Id);
+
+        if (eventEntity.Status is EventStatus.Cancelled or EventStatus.Completed)
+            return (false, "Event is not open for check-in.", ticket.Id);
 
         return ticket.Status switch
         {
