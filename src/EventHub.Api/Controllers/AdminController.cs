@@ -5,6 +5,7 @@ using EventHub.Application.DTOs.Profiles;
 using EventHub.Application.Interfaces.Admin;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace EventHub.Api.Controllers;
 
@@ -15,6 +16,7 @@ public class AdminController(IAdminService adminService) : ControllerBase
 {
     [HttpGet("organizers/pending")]
     [HasPermission(AppPermissions.AdminApprove)]
+    [EnableRateLimiting("admin-relaxed")]
     public async Task<ActionResult<PagedResult<OrganizerProfileDto>>> GetPendingApprovals(
         [FromQuery] PagingQuery query,
         CancellationToken cancellationToken)
@@ -25,6 +27,7 @@ public class AdminController(IAdminService adminService) : ControllerBase
 
     [HttpPost("organizers/{userId:int}/approve")]
     [HasPermission(AppPermissions.AdminApprove)]
+    [EnableRateLimiting("admin-strict")]
     public async Task<ActionResult<OrganizerProfileDto>> ApproveOrganizer(
         int userId,
         CancellationToken cancellationToken)
@@ -35,6 +38,7 @@ public class AdminController(IAdminService adminService) : ControllerBase
 
     [HttpGet("stats")]
     [HasPermission(AppPermissions.AdminStats)]
+    [EnableRateLimiting("admin-relaxed")]
     public async Task<ActionResult<GlobalStatsDto>> GetStats(CancellationToken cancellationToken)
     {
         var result = await adminService.GetGlobalStatsAsync(cancellationToken);
@@ -43,6 +47,7 @@ public class AdminController(IAdminService adminService) : ControllerBase
 
     [HttpPost("gate-staff")]
     [HasPermission(AppPermissions.AdminGateStaff)]
+    [EnableRateLimiting("admin-strict")]
     public async Task<ActionResult<GateStaffProfileDto>> CreateGateStaff(
         [FromBody] CreateGateStaffDto dto,
         CancellationToken cancellationToken)
@@ -53,6 +58,7 @@ public class AdminController(IAdminService adminService) : ControllerBase
 
     [HttpPost("gate-staff/assign")]
     [HasPermission(AppPermissions.AdminGateStaff)]
+    [EnableRateLimiting("admin-strict")]
     public async Task<ActionResult<GateStaffProfileDto>> AssignGateStaff(
         [FromBody] AssignGateStaffDto dto,
         CancellationToken cancellationToken)

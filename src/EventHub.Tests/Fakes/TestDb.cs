@@ -104,6 +104,7 @@ public sealed class TestDb
         Organizers,
         Users,
         Roles,
+        UserRoles,
         Events,
         Tickets,
         Payments,

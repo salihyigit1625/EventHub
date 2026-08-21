@@ -1,14 +1,9 @@
 using EventHub.Application.Common;
 using EventHub.Application.DTOs.Admin;
 using EventHub.Application.DTOs.Profiles;
-using EventHub.Application.DTOs.Ticketing;
-using EventHub.Application.Interfaces.Persistence;
-using EventHub.Application.Interfaces.Identity;
-using EventHub.Application.Interfaces.Events;
-using EventHub.Application.Interfaces.Profiles;
-using EventHub.Application.Interfaces.Ticketing;
 using EventHub.Application.Interfaces.Admin;
-using EventHub.Application.Interfaces.Storage;
+using EventHub.Application.Interfaces.Identity;
+using EventHub.Application.Interfaces.Persistence;
 using EventHub.Domain.Entities.Events;
 using EventHub.Domain.Entities.Identity;
 using EventHub.Domain.Entities.Profiles;
@@ -22,6 +17,7 @@ public class AdminService(
     IGenericRepository<OrganizerProfile> organizerRepository,
     IGenericRepository<User> userRepository,
     IGenericRepository<Role> roleRepository,
+    IGenericRepository<UserRole> userRoleRepository,
     IGenericRepository<Event> eventRepository,
     IGenericRepository<Ticket> ticketRepository,
     IGenericRepository<Payment> paymentRepository,
@@ -81,8 +77,7 @@ public class AdminService(
         string? assignedEventTitle = null;
         if (dto.AssignedEventId is { } eventId)
         {
-            var assignedEvent = await eventRepository.GetByIdAsync(eventId, cancellationToken)
-                ?? throw new KeyNotFoundException($"Event ({eventId}) was not found.");
+            var assignedEvent = await EnsureEventAssignableAsync(eventId, cancellationToken);
             assignedEventTitle = assignedEvent.Title;
         }
 
@@ -170,8 +165,9 @@ public class AdminService(
         var profile = await gateStaffRepository.GetByIdAsync(dto.GateStaffUserId, cancellationToken)
             ?? throw new KeyNotFoundException($"GateStaffProfile ({dto.GateStaffUserId}) was not found.");
 
-        var eventEntity = await eventRepository.GetByIdAsync(dto.EventId, cancellationToken)
-            ?? throw new KeyNotFoundException($"Event ({dto.EventId}) was not found.");
+        await EnsureUserHasGateStaffRoleAsync(dto.GateStaffUserId, cancellationToken);
+
+        var eventEntity = await EnsureEventAssignableAsync(dto.EventId, cancellationToken);
 
         var user = await userRepository.GetByIdAsync(dto.GateStaffUserId, cancellationToken)
             ?? throw new KeyNotFoundException($"User ({dto.GateStaffUserId}) was not found.");
@@ -188,5 +184,29 @@ public class AdminService(
             AssignedEventId = eventEntity.Id,
             AssignedEventTitle = eventEntity.Title
         };
+    }
+
+    private async Task<Event> EnsureEventAssignableAsync(int eventId, CancellationToken cancellationToken)
+    {
+        var eventEntity = await eventRepository.GetByIdAsync(eventId, cancellationToken)
+            ?? throw new KeyNotFoundException($"Event ({eventId}) was not found.");
+
+        if (eventEntity.Status != EventStatus.Published)
+            throw new InvalidOperationException("Gate staff can only be assigned to published events.");
+
+        return eventEntity;
+    }
+
+    private async Task EnsureUserHasGateStaffRoleAsync(int userId, CancellationToken cancellationToken)
+    {
+        var role = await roleRepository.FirstOrDefaultAsync(r => r.Name == AppRoles.GateStaff, cancellationToken)
+            ?? throw new KeyNotFoundException($"Role '{AppRoles.GateStaff}' was not found.");
+
+        var hasRole = await userRoleRepository.AnyAsync(
+            ur => ur.UserId == userId && ur.RoleId == role.Id,
+            cancellationToken);
+
+        if (!hasRole)
+            throw new InvalidOperationException("User is not a gate staff member.");
     }
 }

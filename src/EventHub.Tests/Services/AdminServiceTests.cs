@@ -40,7 +40,7 @@ public class AdminServiceTests
     }
 
     [Test]
-    public async Task CreateGateStaff_WithAssignedEvent_CreatesUserAndProfile()
+    public async Task CreateGateStaff_WithAssignedPublishedEvent_CreatesUserAndProfile()
     {
         var evt = _db.SeedEvent();
 
@@ -58,6 +58,21 @@ public class AdminServiceTests
         Assert.That(dto.AssignedEventTitle, Is.EqualTo(evt.Title));
         Assert.That(_db.GateStaff.Items, Has.Count.EqualTo(1));
         Assert.That(_db.UserRoles.Items.Any(ur => ur.RoleId == 4), Is.True);
+    }
+
+    [Test]
+    public void CreateGateStaff_DraftEvent_Throws()
+    {
+        var evt = _db.SeedEvent(status: EventStatus.Draft);
+
+        Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _db.CreateAdminService().CreateGateStaffAsync(new CreateGateStaffDto
+            {
+                Email = "staff@eventhub.local",
+                Password = "Staff123!",
+                FullName = "New",
+                AssignedEventId = evt.Id
+            }));
     }
 
     [Test]
@@ -139,6 +154,7 @@ public class AdminServiceTests
         var evt = _db.SeedEvent();
         _db.Users.Seed(new User { Id = 30, Email = "gate@eventhub.local", FullName = "Gate" });
         _db.GateStaff.Seed(new GateStaffProfile { UserId = 30 });
+        _db.UserRoles.Seed(new UserRole { UserId = 30, RoleId = 4 });
 
         var dto = await _db.CreateAdminService().AssignGateStaffToEventAsync(new AssignGateStaffDto
         {
@@ -148,5 +164,36 @@ public class AdminServiceTests
 
         Assert.That(dto.AssignedEventId, Is.EqualTo(evt.Id));
         Assert.That(_db.GateStaff.Items.Single().AssignedEventId, Is.EqualTo(evt.Id));
+    }
+
+    [Test]
+    public void AssignGateStaffToEvent_NonPublishedEvent_Throws()
+    {
+        var evt = _db.SeedEvent(status: EventStatus.Cancelled);
+        _db.Users.Seed(new User { Id = 30, Email = "gate@eventhub.local", FullName = "Gate" });
+        _db.GateStaff.Seed(new GateStaffProfile { UserId = 30 });
+        _db.UserRoles.Seed(new UserRole { UserId = 30, RoleId = 4 });
+
+        Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _db.CreateAdminService().AssignGateStaffToEventAsync(new AssignGateStaffDto
+            {
+                GateStaffUserId = 30,
+                EventId = evt.Id
+            }));
+    }
+
+    [Test]
+    public void AssignGateStaffToEvent_WithoutGateStaffRole_Throws()
+    {
+        var evt = _db.SeedEvent();
+        _db.Users.Seed(new User { Id = 30, Email = "gate@eventhub.local", FullName = "Gate" });
+        _db.GateStaff.Seed(new GateStaffProfile { UserId = 30 });
+
+        Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _db.CreateAdminService().AssignGateStaffToEventAsync(new AssignGateStaffDto
+            {
+                GateStaffUserId = 30,
+                EventId = evt.Id
+            }));
     }
 }
