@@ -69,6 +69,45 @@ public class WaitlistServiceTests
     }
 
     [Test]
+    public async Task Join_AfterExpired_AllowsRejoin()
+    {
+        var evt = _db.SeedEvent();
+        var type = _db.SeedTicketType(evt.Id, remaining: 0);
+        _db.CurrentUser.UserId = 20;
+        _db.Waitlists.Seed(new Waitlist
+        {
+            EventId = evt.Id,
+            TicketTypeId = type.Id,
+            AttendeeId = 20,
+            Status = WaitlistStatus.Expired,
+            RequestedAt = DateTime.UtcNow.AddDays(-1)
+        });
+
+        var entry = await _db.CreateWaitlistService().JoinAsync(type.Id);
+
+        Assert.That(entry.Status, Is.EqualTo(WaitlistStatus.Waiting));
+        Assert.That(_db.Waitlists.Items.Count(w => w.AttendeeId == 20), Is.EqualTo(2));
+    }
+
+    [Test]
+    public void Join_WhileNotified_Throws()
+    {
+        var evt = _db.SeedEvent();
+        var type = _db.SeedTicketType(evt.Id, remaining: 0);
+        _db.CurrentUser.UserId = 20;
+        _db.Waitlists.Seed(new Waitlist
+        {
+            EventId = evt.Id,
+            TicketTypeId = type.Id,
+            AttendeeId = 20,
+            Status = WaitlistStatus.Notified,
+            ExpiresAt = DateTime.UtcNow.AddMinutes(10)
+        });
+
+        Assert.ThrowsAsync<InvalidOperationException>(() => _db.CreateWaitlistService().JoinAsync(type.Id));
+    }
+
+    [Test]
     public async Task NotifyNext_SelectsFifoAndSetsThirtyMinuteExpiry()
     {
         var evt = _db.SeedEvent(organizerId: 10);

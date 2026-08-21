@@ -27,7 +27,9 @@ public class WaitlistConfiguration : IEntityTypeConfiguration<Waitlist>
             .HasForeignKey(w => w.AttendeeId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        // Waiting=1, Notified=2 — allow re-join after Expired/Converted.
         builder.HasIndex(w => new { w.EventId, w.TicketTypeId, w.AttendeeId })
-            .IsUnique();
+            .IsUnique()
+            .HasFilter("[Status] IN (1, 2)");
     }
 }

@@ -88,7 +88,7 @@ public class TicketTypeServiceTests
     [Test]
     public async Task Update_RecalculatesRemainingFromSoldCount()
     {
-        var evt = _db.SeedEvent(organizerId: 10);
+        var evt = _db.SeedEvent(organizerId: 10, status: EventStatus.Draft);
         _db.CurrentUser.UserId = 10;
         var type = _db.SeedTicketType(evt.Id, remaining: 7, total: 10);
 
@@ -97,6 +97,7 @@ public class TicketTypeServiceTests
             Name = "Updated",
             Price = 120m,
             TotalQuantity = 20,
+            MaxTicketsPerUser = 5,
             SaleStartDate = type.SaleStartDate,
             SaleEndDate = type.SaleEndDate
         });
@@ -106,9 +107,72 @@ public class TicketTypeServiceTests
     }
 
     [Test]
+    public void Update_Published_PriceChange_Throws()
+    {
+        var evt = _db.SeedEvent(organizerId: 10, status: EventStatus.Published);
+        _db.CurrentUser.UserId = 10;
+        var type = _db.SeedTicketType(evt.Id, remaining: 7, total: 10, price: 100m);
+
+        Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _db.CreateTicketTypeService().UpdateAsync(type.Id, new UpdateTicketTypeDto
+            {
+                Name = type.Name,
+                Price = 150m,
+                TotalQuantity = type.TotalQuantity,
+                MaxTicketsPerUser = type.MaxTicketsPerUser,
+                SaleStartDate = type.SaleStartDate,
+                SaleEndDate = type.SaleEndDate
+            }));
+    }
+
+    [Test]
+    public void Update_Published_TotalQuantityChange_Throws()
+    {
+        var evt = _db.SeedEvent(organizerId: 10, status: EventStatus.Published);
+        _db.CurrentUser.UserId = 10;
+        var type = _db.SeedTicketType(evt.Id, remaining: 7, total: 10);
+
+        Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _db.CreateTicketTypeService().UpdateAsync(type.Id, new UpdateTicketTypeDto
+            {
+                Name = type.Name,
+                Price = type.Price,
+                TotalQuantity = 20,
+                MaxTicketsPerUser = type.MaxTicketsPerUser,
+                SaleStartDate = type.SaleStartDate,
+                SaleEndDate = type.SaleEndDate
+            }));
+    }
+
+    [Test]
+    public async Task Update_Published_NameAndSaleWindow_Succeeds()
+    {
+        var evt = _db.SeedEvent(organizerId: 10, status: EventStatus.Published);
+        _db.CurrentUser.UserId = 10;
+        var type = _db.SeedTicketType(evt.Id, remaining: 7, total: 10);
+        var newEnd = type.SaleEndDate.AddDays(1);
+
+        var updated = await _db.CreateTicketTypeService().UpdateAsync(type.Id, new UpdateTicketTypeDto
+        {
+            Name = "Renamed GA",
+            Price = type.Price,
+            TotalQuantity = type.TotalQuantity,
+            MaxTicketsPerUser = 3,
+            SaleStartDate = type.SaleStartDate,
+            SaleEndDate = newEnd
+        });
+
+        Assert.That(updated.Name, Is.EqualTo("Renamed GA"));
+        Assert.That(updated.MaxTicketsPerUser, Is.EqualTo(3));
+        Assert.That(updated.SaleEndDate, Is.EqualTo(newEnd));
+        Assert.That(updated.Price, Is.EqualTo(type.Price));
+        Assert.That(updated.TotalQuantity, Is.EqualTo(10));
+    }
+
+    [Test]
     public void Update_OtherOrganizer_Throws()
     {
-        var evt = _db.SeedEvent(organizerId: 10);
+        var evt = _db.SeedEvent(organizerId: 10, status: EventStatus.Draft);
         var type = _db.SeedTicketType(evt.Id, remaining: 7, total: 10);
         _db.CurrentUser.UserId = 99;
 
@@ -118,6 +182,7 @@ public class TicketTypeServiceTests
                 Name = "Updated",
                 Price = 120m,
                 TotalQuantity = 20,
+                MaxTicketsPerUser = 5,
                 SaleStartDate = type.SaleStartDate,
                 SaleEndDate = type.SaleEndDate
             }));
@@ -126,7 +191,7 @@ public class TicketTypeServiceTests
     [Test]
     public void Update_TotalBelowSold_Throws()
     {
-        var evt = _db.SeedEvent(organizerId: 10);
+        var evt = _db.SeedEvent(organizerId: 10, status: EventStatus.Draft);
         _db.CurrentUser.UserId = 10;
         var type = _db.SeedTicketType(evt.Id, remaining: 2, total: 10);
 
@@ -136,6 +201,7 @@ public class TicketTypeServiceTests
                 Name = "GA",
                 Price = 10,
                 TotalQuantity = 7,
+                MaxTicketsPerUser = 5,
                 SaleStartDate = type.SaleStartDate,
                 SaleEndDate = type.SaleEndDate
             }));

@@ -1,3 +1,4 @@
+using EventHub.Application.Common;
 using EventHub.Application.DTOs.Profiles;
 using EventHub.Application.DTOs.Ticketing;
 using EventHub.Application.Interfaces.Identity;
@@ -43,9 +44,15 @@ public class GateStaffService(
 
         if (isSuccessful && ticket is not null)
         {
-            ticket.Status = TicketStatus.CheckedIn;
-            ticket.CheckedInAt = now;
-            ticketRepository.Update(ticket);
+            if (!TicketCheckInGuard.TryClaimForCheckIn(ticket, now))
+            {
+                isSuccessful = false;
+                failureReason = "Ticket has already been checked in.";
+            }
+            else
+            {
+                ticketRepository.Update(ticket);
+            }
         }
 
         await checkInLogRepository.AddAsync(new CheckInLog
@@ -59,7 +66,22 @@ public class GateStaffService(
             CheckedInAt = now
         }, cancellationToken);
 
-        await unitOfWork.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+        catch (InvalidOperationException) when (isSuccessful)
+        {
+            // Concurrent check-in won the RowVersion race.
+            return new CheckInResultDto
+            {
+                IsSuccessful = false,
+                ScannedCode = scannedCode,
+                FailureReason = "Ticket has already been checked in.",
+                TicketId = ticketId,
+                CheckedInAt = now
+            };
+        }
 
         return new CheckInResultDto
         {

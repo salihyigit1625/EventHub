@@ -19,6 +19,9 @@ public class TicketTypeConfiguration : IEntityTypeConfiguration<TicketType>
         builder.Property(t => t.Price)
             .HasPrecision(18, 2);
 
+        builder.Property(t => t.MaxTicketsPerUser)
+            .HasDefaultValue(5);
+
         builder.Property(t => t.RowVersion)
             .IsRowVersion();
 

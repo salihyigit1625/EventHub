@@ -8,6 +8,7 @@ public class TicketTypeDto
     public decimal Price { get; set; }
     public int TotalQuantity { get; set; }
     public int RemainingQuantity { get; set; }
+    public int MaxTicketsPerUser { get; set; }
     public DateTime SaleStartDate { get; set; }
     public DateTime SaleEndDate { get; set; }
 }
