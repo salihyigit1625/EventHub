@@ -88,6 +88,34 @@ public class TicketServiceTests
     }
 
     [Test]
+    public void Purchase_AtPerUserLimit_Throws()
+    {
+        var evt = _db.SeedEvent();
+        var type = _db.SeedTicketType(evt.Id, remaining: 5, maxTicketsPerUser: 1);
+        _db.SeedAttendee(20, 500m);
+        _db.SeedTicket(type.Id, 20);
+        _db.CurrentUser.UserId = 20;
+
+        Assert.ThrowsAsync<InvalidOperationException>(() => _db.CreateTicketService().PurchaseAsync(type.Id));
+        Assert.That(type.RemainingQuantity, Is.EqualTo(5));
+    }
+
+    [Test]
+    public async Task Purchase_CancelledTicket_DoesNotCountTowardLimit()
+    {
+        var evt = _db.SeedEvent();
+        var type = _db.SeedTicketType(evt.Id, remaining: 5, price: 50m, maxTicketsPerUser: 1);
+        _db.SeedAttendee(20, 500m);
+        _db.SeedTicket(type.Id, 20, TicketStatus.Cancelled);
+        _db.CurrentUser.UserId = 20;
+
+        var ticket = await _db.CreateTicketService().PurchaseAsync(type.Id);
+
+        Assert.That(ticket.Status, Is.EqualTo(TicketStatus.Paid));
+        Assert.That(type.RemainingQuantity, Is.EqualTo(4));
+    }
+
+    [Test]
     public void Purchase_Unauthenticated_Throws()
     {
         Assert.ThrowsAsync<UnauthorizedAccessException>(() => _db.CreateTicketService().PurchaseAsync(1));

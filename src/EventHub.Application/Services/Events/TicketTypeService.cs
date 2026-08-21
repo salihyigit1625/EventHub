@@ -48,6 +48,14 @@ public class TicketTypeService(
 
         EventOwnership.EnsureOwnedBy(eventEntity, currentUser.UserId);
 
+        if (eventEntity.Status is EventStatus.Cancelled or EventStatus.Completed)
+            throw new InvalidOperationException("Ticket types cannot be updated on cancelled or completed events.");
+
+        if (eventEntity.Status == EventStatus.Published
+            && (dto.Price != ticketType.Price || dto.TotalQuantity != ticketType.TotalQuantity))
+            throw new InvalidOperationException(
+                "Price and total quantity cannot be changed after the event is published.");
+
         var soldQuantity = ticketType.TotalQuantity - ticketType.RemainingQuantity;
         if (dto.TotalQuantity < soldQuantity)
             throw new InvalidOperationException("Total quantity cannot be lower than the number of tickets already sold.");

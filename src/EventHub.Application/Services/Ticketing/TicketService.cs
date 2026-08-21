@@ -51,6 +51,13 @@ public class TicketService(
             var attendee = await attendeeRepository.GetByIdAsync(attendeeId, ct)
                 ?? throw new KeyNotFoundException($"AttendeeProfile ({attendeeId}) was not found.");
 
+            await TicketPurchaseGuard.EnsureUnderPerUserLimitAsync(
+                ticketRepository,
+                ticketTypeId,
+                attendeeId,
+                ticketType.MaxTicketsPerUser,
+                ct);
+
             ticketType.RemainingQuantity--;
             WalletBalanceGuard.Debit(attendee, ticketType.Price);
 

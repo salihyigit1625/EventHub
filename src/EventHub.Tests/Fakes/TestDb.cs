@@ -204,7 +204,8 @@ public sealed class TestDb
         int total = 10,
         decimal price = 100m,
         DateTime? saleStart = null,
-        DateTime? saleEnd = null)
+        DateTime? saleEnd = null,
+        int maxTicketsPerUser = 5)
     {
         var type = new TicketType
         {
@@ -213,6 +214,7 @@ public sealed class TestDb
             Price = price,
             TotalQuantity = total,
             RemainingQuantity = remaining,
+            MaxTicketsPerUser = maxTicketsPerUser,
             SaleStartDate = saleStart ?? DateTime.UtcNow.AddDays(-1),
             SaleEndDate = saleEnd ?? DateTime.UtcNow.AddDays(20)
         };

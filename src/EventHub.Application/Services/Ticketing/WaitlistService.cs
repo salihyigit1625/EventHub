@@ -50,7 +50,7 @@ public class WaitlistService(
         if (await waitlistRepository.AnyAsync(
                 w => w.TicketTypeId == ticketTypeId
                      && w.AttendeeId == attendeeId
-                     && w.Status == WaitlistStatus.Waiting,
+                     && (w.Status == WaitlistStatus.Waiting || w.Status == WaitlistStatus.Notified),
                 cancellationToken))
             throw new InvalidOperationException("You are already on the waitlist for this ticket type.");
 
@@ -119,6 +119,13 @@ public class WaitlistService(
 
             var attendee = await attendeeRepository.GetByIdAsync(entry.AttendeeId, ct)
                 ?? throw new KeyNotFoundException($"AttendeeProfile ({entry.AttendeeId}) was not found.");
+
+            await TicketPurchaseGuard.EnsureUnderPerUserLimitAsync(
+                ticketRepository,
+                ticketType.Id,
+                entry.AttendeeId,
+                ticketType.MaxTicketsPerUser,
+                ct);
 
             WalletBalanceGuard.Debit(attendee, ticketType.Price);
             entry.Status = WaitlistStatus.Converted;
