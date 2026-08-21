@@ -22,6 +22,9 @@ public class PaymentConfiguration : IEntityTypeConfiguration<Payment>
         builder.HasIndex(p => p.TransactionCode)
             .IsUnique();
 
+        builder.Property(p => p.RowVersion)
+            .IsRowVersion();
+
         builder.HasOne(p => p.Ticket)
             .WithOne(t => t.Payment)
             .HasForeignKey<Payment>(p => p.TicketId)

@@ -15,6 +15,9 @@ public class AttendeeProfileConfiguration : IEntityTypeConfiguration<AttendeePro
         builder.Property(a => a.WalletBalance)
             .HasPrecision(18, 2);
 
+        builder.Property(a => a.RowVersion)
+            .IsRowVersion();
+
         builder.HasOne(a => a.User)
             .WithOne(u => u.AttendeeProfile)
             .HasForeignKey<AttendeeProfile>(a => a.UserId)

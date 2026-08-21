@@ -18,6 +18,7 @@ public class Ticket : BaseEntity
     public TicketStatus Status { get; set; } = TicketStatus.Reserved;
     public DateTime? PurchasedAt { get; set; }
     public DateTime? CheckedInAt { get; set; }
+    public byte[] RowVersion { get; set; } = null!;
 
     public virtual Payment? Payment { get; set; }
     public virtual ICollection<CheckInLog> CheckInLogs { get; set; } = new List<CheckInLog>();

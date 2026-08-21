@@ -32,8 +32,7 @@ public class WalletService(
         var attendee = await attendeeRepository.GetByIdAsync(attendeeId, cancellationToken)
             ?? throw new KeyNotFoundException($"AttendeeProfile ({attendeeId}) was not found.");
 
-        attendee.WalletBalance += dto.Amount;
-        attendee.UpdatedAt = DateTime.UtcNow;
+        WalletBalanceGuard.Credit(attendee, dto.Amount);
 
         await walletTransactionRepository.AddAsync(new WalletTransaction
         {

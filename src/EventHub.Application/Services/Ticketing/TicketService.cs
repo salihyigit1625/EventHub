@@ -53,8 +53,7 @@ public class TicketService(
             throw new InvalidOperationException("Insufficient wallet balance.");
 
         ticketType.RemainingQuantity--;
-        attendee.WalletBalance -= ticketType.Price;
-        attendee.UpdatedAt = now;
+        WalletBalanceGuard.Debit(attendee, ticketType.Price);
 
         var ticket = new Ticket
         {
@@ -128,31 +127,35 @@ public class TicketService(
         var attendee = await attendeeRepository.GetByIdAsync(ticket.AttendeeId, cancellationToken)
             ?? throw new KeyNotFoundException($"AttendeeProfile ({ticket.AttendeeId}) was not found.");
 
+        if (!TicketRefundGuard.TryClaimPaidTicket(ticket, TicketStatus.Cancelled))
+            throw new InvalidOperationException("Only paid tickets can be cancelled.");
+
         ticketType.RemainingQuantity++;
-        ticket.Status = TicketStatus.Cancelled;
-        attendee.WalletBalance += ticket.UnitPrice;
-        attendee.UpdatedAt = DateTime.UtcNow;
 
         var payment = await paymentRepository.FirstOrDefaultAsync(p => p.TicketId == ticket.Id, cancellationToken);
-        if (payment is not null)
+        var shouldCreditWallet = TicketRefundGuard.TryClaimCompletedPayment(payment) || payment is null;
+        if (shouldCreditWallet)
         {
-            payment.Status = PaymentStatus.Refunded;
-            paymentRepository.Update(payment);
+            WalletBalanceGuard.Credit(attendee, ticket.UnitPrice);
+
+            await walletTransactionRepository.AddAsync(new WalletTransaction
+            {
+                AttendeeId = ticket.AttendeeId,
+                Amount = ticket.UnitPrice,
+                BalanceAfter = attendee.WalletBalance,
+                Type = WalletTransactionType.Refund,
+                PaymentId = payment?.Id,
+                TicketId = ticket.Id
+            }, cancellationToken);
+
+            attendeeRepository.Update(attendee);
         }
 
-        await walletTransactionRepository.AddAsync(new WalletTransaction
-        {
-            AttendeeId = ticket.AttendeeId,
-            Amount = ticket.UnitPrice,
-            BalanceAfter = attendee.WalletBalance,
-            Type = WalletTransactionType.Refund,
-            PaymentId = payment?.Id,
-            TicketId = ticket.Id
-        }, cancellationToken);
+        if (payment is not null)
+            paymentRepository.Update(payment);
 
         ticketRepository.Update(ticket);
         ticketTypeRepository.Update(ticketType);
-        attendeeRepository.Update(attendee);
         await unitOfWork.SaveChangesAsync(cancellationToken);
 
         return mapper.Map<TicketDto>(ticket);
