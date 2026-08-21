@@ -1,13 +1,9 @@
 using AutoMapper;
 using EventHub.Application.Common;
 using EventHub.Application.DTOs.Ticketing;
-using EventHub.Application.Interfaces.Persistence;
 using EventHub.Application.Interfaces.Identity;
-using EventHub.Application.Interfaces.Events;
-using EventHub.Application.Interfaces.Profiles;
+using EventHub.Application.Interfaces.Persistence;
 using EventHub.Application.Interfaces.Ticketing;
-using EventHub.Application.Interfaces.Admin;
-using EventHub.Application.Interfaces.Storage;
 using EventHub.Domain.Entities.Events;
 using EventHub.Domain.Entities.Profiles;
 using EventHub.Domain.Entities.Ticketing;
@@ -44,6 +40,9 @@ public class WaitlistService(
         if (eventEntity.Status != EventStatus.Published)
             throw new InvalidOperationException("Waitlist is only available for published events.");
 
+        if (DateTime.UtcNow >= eventEntity.StartDate)
+            throw new InvalidOperationException("Waitlist is not available after the event has started.");
+
         if (await waitlistRepository.AnyAsync(
                 w => w.TicketTypeId == ticketTypeId
                      && w.AttendeeId == attendeeId
@@ -68,8 +67,14 @@ public class WaitlistService(
 
     public async Task<TicketDto> ConvertAsync(int waitlistId, CancellationToken cancellationToken = default)
     {
+        var attendeeId = currentUser.UserId
+            ?? throw new UnauthorizedAccessException("Authentication is required.");
+
         var entry = await waitlistRepository.GetByIdAsync(waitlistId, cancellationToken)
             ?? throw new KeyNotFoundException($"Waitlist ({waitlistId}) was not found.");
+
+        if (entry.AttendeeId != attendeeId)
+            throw new KeyNotFoundException($"Waitlist ({waitlistId}) was not found.");
 
         if (entry.Status != WaitlistStatus.Notified)
             throw new InvalidOperationException("Only notified waitlist entries can be converted.");
@@ -84,6 +89,15 @@ public class WaitlistService(
 
         var ticketType = await ticketTypeRepository.GetByIdAsync(entry.TicketTypeId, cancellationToken)
             ?? throw new KeyNotFoundException($"TicketType ({entry.TicketTypeId}) was not found.");
+
+        var eventEntity = await eventRepository.GetByIdAsync(ticketType.EventId, cancellationToken)
+            ?? throw new KeyNotFoundException($"Event ({ticketType.EventId}) was not found.");
+
+        if (eventEntity.Status != EventStatus.Published)
+            throw new InvalidOperationException("Tickets can only be purchased for published events.");
+
+        if (DateTime.UtcNow >= eventEntity.StartDate)
+            throw new InvalidOperationException("Tickets cannot be purchased after the event has started.");
 
         if (ticketType.RemainingQuantity <= 0)
             throw new InvalidOperationException("This ticket type is still sold out.");
@@ -147,6 +161,11 @@ public class WaitlistService(
     {
         var ticketType = await ticketTypeRepository.GetByIdAsync(ticketTypeId, cancellationToken)
             ?? throw new KeyNotFoundException($"TicketType ({ticketTypeId}) was not found.");
+
+        var eventEntity = await eventRepository.GetByIdAsync(ticketType.EventId, cancellationToken)
+            ?? throw new KeyNotFoundException($"Event ({ticketType.EventId}) was not found.");
+
+        EventOwnership.EnsureOwnedBy(eventEntity, currentUser.UserId);
 
         if (ticketType.RemainingQuantity <= 0)
             throw new InvalidOperationException("There are no available tickets to offer.");
