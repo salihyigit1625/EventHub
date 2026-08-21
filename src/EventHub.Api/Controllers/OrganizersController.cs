@@ -4,6 +4,7 @@ using EventHub.Application.DTOs.Profiles;
 using EventHub.Application.Interfaces.Profiles;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace EventHub.Api.Controllers;
 
@@ -12,8 +13,9 @@ namespace EventHub.Api.Controllers;
 public class OrganizersController(IOrganizerService organizerService) : ControllerBase
 {
     [HttpGet("{userId:int}")]
-    [Authorize]
+    [Authorize(Roles = AppRoles.Admin)]
     [HasPermission(AppPermissions.OrganizersView)]
+    [EnableRateLimiting("organizers-relaxed")]
     public async Task<ActionResult<OrganizerProfileDto>> GetProfile(int userId, CancellationToken cancellationToken)
     {
         var result = await organizerService.GetProfileAsync(userId, cancellationToken);
@@ -23,6 +25,7 @@ public class OrganizersController(IOrganizerService organizerService) : Controll
     [HttpPut("me")]
     [Authorize(Roles = AppRoles.Organizer)]
     [HasPermission(AppPermissions.OrganizersUpdate)]
+    [EnableRateLimiting("organizers-strict")]
     public async Task<ActionResult<OrganizerProfileDto>> UpdateProfile(
         [FromBody] UpdateOrganizerProfileDto dto,
         CancellationToken cancellationToken)

@@ -126,6 +126,7 @@ public sealed class TestDb
 
     public GateStaffService CreateGateStaffService() => new(
         Tickets,
+        TicketTypes,
         CheckInLogs,
         GateStaff,
         Users,
