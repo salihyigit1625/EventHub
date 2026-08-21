@@ -48,6 +48,16 @@ public class WaitlistServiceTests
     }
 
     [Test]
+    public void Join_EventAlreadyStarted_Throws()
+    {
+        var evt = _db.SeedEvent(start: DateTime.UtcNow.AddHours(-1));
+        var type = _db.SeedTicketType(evt.Id, remaining: 0);
+        _db.CurrentUser.UserId = 20;
+
+        Assert.ThrowsAsync<InvalidOperationException>(() => _db.CreateWaitlistService().JoinAsync(type.Id));
+    }
+
+    [Test]
     public async Task Join_DuplicateWaiting_Throws()
     {
         var evt = _db.SeedEvent();
@@ -61,8 +71,9 @@ public class WaitlistServiceTests
     [Test]
     public async Task NotifyNext_SelectsFifoAndSetsThirtyMinuteExpiry()
     {
-        var evt = _db.SeedEvent();
+        var evt = _db.SeedEvent(organizerId: 10);
         var type = _db.SeedTicketType(evt.Id, remaining: 1);
+        _db.CurrentUser.UserId = 10;
         _db.Waitlists.Seed(
             new Waitlist
             {
@@ -89,10 +100,22 @@ public class WaitlistServiceTests
     }
 
     [Test]
+    public void NotifyNext_OtherOrganizersEvent_Throws()
+    {
+        var evt = _db.SeedEvent(organizerId: 10);
+        var type = _db.SeedTicketType(evt.Id, remaining: 1);
+        _db.CurrentUser.UserId = 99;
+
+        Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            _db.CreateWaitlistService().NotifyNextAsync(type.Id));
+    }
+
+    [Test]
     public void NotifyNext_NoRemainingTickets_Throws()
     {
-        var evt = _db.SeedEvent();
+        var evt = _db.SeedEvent(organizerId: 10);
         var type = _db.SeedTicketType(evt.Id, remaining: 0);
+        _db.CurrentUser.UserId = 10;
         Assert.ThrowsAsync<InvalidOperationException>(() =>
             _db.CreateWaitlistService().NotifyNextAsync(type.Id));
     }
@@ -100,8 +123,9 @@ public class WaitlistServiceTests
     [Test]
     public void NotifyNext_ActiveOfferExists_Throws()
     {
-        var evt = _db.SeedEvent();
+        var evt = _db.SeedEvent(organizerId: 10);
         var type = _db.SeedTicketType(evt.Id, remaining: 1);
+        _db.CurrentUser.UserId = 10;
         _db.Waitlists.Seed(new Waitlist
         {
             EventId = evt.Id,
@@ -118,8 +142,9 @@ public class WaitlistServiceTests
     [Test]
     public async Task NotifyNext_ExpiresStaleOffersThenNotifiesWaiting()
     {
-        var evt = _db.SeedEvent();
+        var evt = _db.SeedEvent(organizerId: 10);
         var type = _db.SeedTicketType(evt.Id, remaining: 1);
+        _db.CurrentUser.UserId = 10;
         var stale = new Waitlist
         {
             EventId = evt.Id,
@@ -147,8 +172,9 @@ public class WaitlistServiceTests
     [Test]
     public void NotifyNext_NobodyWaiting_Throws()
     {
-        var evt = _db.SeedEvent();
+        var evt = _db.SeedEvent(organizerId: 10);
         var type = _db.SeedTicketType(evt.Id, remaining: 1);
+        _db.CurrentUser.UserId = 10;
         Assert.ThrowsAsync<InvalidOperationException>(() =>
             _db.CreateWaitlistService().NotifyNextAsync(type.Id));
     }
@@ -156,6 +182,7 @@ public class WaitlistServiceTests
     [Test]
     public void Convert_WaitingStatus_Throws()
     {
+        _db.CurrentUser.UserId = 20;
         _db.Waitlists.Seed(new Waitlist { Status = WaitlistStatus.Waiting, TicketTypeId = 1, AttendeeId = 20 });
         Assert.ThrowsAsync<InvalidOperationException>(() =>
             _db.CreateWaitlistService().ConvertAsync(_db.Waitlists.Items[0].Id));
@@ -164,6 +191,7 @@ public class WaitlistServiceTests
     [Test]
     public void Convert_ExpiredOffer_MarksExpiredAndThrows()
     {
+        _db.CurrentUser.UserId = 20;
         _db.Waitlists.Seed(new Waitlist
         {
             Status = WaitlistStatus.Notified,
@@ -178,7 +206,31 @@ public class WaitlistServiceTests
     }
 
     [Test]
-    public async Task Convert_Notified_PurchasesWithoutOwnerCheck()
+    public async Task Convert_OwnNotified_PurchasesTicket()
+    {
+        var evt = _db.SeedEvent();
+        var type = _db.SeedTicketType(evt.Id, remaining: 1, price: 50m);
+        var attendee = _db.SeedAttendee(20, 80m);
+        _db.Waitlists.Seed(new Waitlist
+        {
+            EventId = evt.Id,
+            TicketTypeId = type.Id,
+            AttendeeId = attendee.UserId,
+            Status = WaitlistStatus.Notified,
+            ExpiresAt = DateTime.UtcNow.AddMinutes(10)
+        });
+        _db.CurrentUser.UserId = 20;
+
+        var ticket = await _db.CreateWaitlistService().ConvertAsync(_db.Waitlists.Items[0].Id);
+
+        Assert.That(ticket.AttendeeId, Is.EqualTo(20));
+        Assert.That(_db.Waitlists.Items[0].Status, Is.EqualTo(WaitlistStatus.Converted));
+        Assert.That(type.RemainingQuantity, Is.EqualTo(0));
+        Assert.That(attendee.WalletBalance, Is.EqualTo(30m));
+    }
+
+    [Test]
+    public void Convert_OtherUsersEntry_ThrowsNotFound()
     {
         var evt = _db.SeedEvent();
         var type = _db.SeedTicketType(evt.Id, remaining: 1, price: 50m);
@@ -193,12 +245,11 @@ public class WaitlistServiceTests
         });
         _db.CurrentUser.UserId = 99;
 
-        var ticket = await _db.CreateWaitlistService().ConvertAsync(_db.Waitlists.Items[0].Id);
-
-        Assert.That(ticket.AttendeeId, Is.EqualTo(20));
-        Assert.That(_db.Waitlists.Items[0].Status, Is.EqualTo(WaitlistStatus.Converted));
-        Assert.That(type.RemainingQuantity, Is.EqualTo(0));
-        Assert.That(attendee.WalletBalance, Is.EqualTo(30m));
+        Assert.ThrowsAsync<KeyNotFoundException>(() =>
+            _db.CreateWaitlistService().ConvertAsync(_db.Waitlists.Items[0].Id));
+        Assert.That(_db.Waitlists.Items[0].Status, Is.EqualTo(WaitlistStatus.Notified));
+        Assert.That(attendee.WalletBalance, Is.EqualTo(80m));
+        Assert.That(type.RemainingQuantity, Is.EqualTo(1));
     }
 
     [Test]
@@ -207,6 +258,7 @@ public class WaitlistServiceTests
         var evt = _db.SeedEvent();
         var type = _db.SeedTicketType(evt.Id, remaining: 0);
         _db.SeedAttendee(20, 500m);
+        _db.CurrentUser.UserId = 20;
         _db.Waitlists.Seed(new Waitlist
         {
             EventId = evt.Id,
@@ -226,6 +278,7 @@ public class WaitlistServiceTests
         var evt = _db.SeedEvent();
         var type = _db.SeedTicketType(evt.Id, remaining: 1, price: 200m);
         _db.SeedAttendee(20, 10m);
+        _db.CurrentUser.UserId = 20;
         _db.Waitlists.Seed(new Waitlist
         {
             EventId = evt.Id,
