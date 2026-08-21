@@ -22,6 +22,9 @@ public class TicketConfiguration : IEntityTypeConfiguration<Ticket>
         builder.Property(t => t.UnitPrice)
             .HasPrecision(18, 2);
 
+        builder.Property(t => t.RowVersion)
+            .IsRowVersion();
+
         builder.HasOne(t => t.TicketType)
             .WithMany(tt => tt.Tickets)
             .HasForeignKey(t => t.TicketTypeId)

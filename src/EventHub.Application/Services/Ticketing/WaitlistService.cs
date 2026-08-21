@@ -110,8 +110,7 @@ public class WaitlistService(
 
         var now = DateTime.UtcNow;
         ticketType.RemainingQuantity--;
-        attendee.WalletBalance -= ticketType.Price;
-        attendee.UpdatedAt = now;
+        WalletBalanceGuard.Debit(attendee, ticketType.Price);
         entry.Status = WaitlistStatus.Converted;
 
         var ticket = new Ticket

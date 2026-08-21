@@ -9,4 +9,5 @@ public class AttendeeProfile
 
     public decimal WalletBalance { get; set; } = 0.00m;
     public DateTime? UpdatedAt { get; set; }
+    public byte[] RowVersion { get; set; } = null!;
 }

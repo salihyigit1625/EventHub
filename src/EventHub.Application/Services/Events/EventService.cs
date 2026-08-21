@@ -110,23 +110,29 @@ public class EventService(
 
         foreach (var ticket in tickets)
         {
-            ticket.Status = TicketStatus.Refunded;
+            if (!TicketRefundGuard.TryClaimPaidTicket(ticket, TicketStatus.Refunded))
+                continue;
+
             ticketRepository.Update(ticket);
+
+            var payment = await paymentRepository.FirstOrDefaultAsync(p => p.TicketId == ticket.Id, cancellationToken);
+            var shouldCreditWallet = TicketRefundGuard.TryClaimCompletedPayment(payment) || payment is null;
+            if (!shouldCreditWallet)
+            {
+                if (payment is not null)
+                    paymentRepository.Update(payment);
+                continue;
+            }
 
             var attendee = await attendeeRepository.GetByIdAsync(ticket.AttendeeId, cancellationToken);
             if (attendee is null)
                 continue;
 
-            attendee.WalletBalance += ticket.UnitPrice;
-            attendee.UpdatedAt = DateTime.UtcNow;
+            WalletBalanceGuard.Credit(attendee, ticket.UnitPrice);
             attendeeRepository.Update(attendee);
 
-            var payment = await paymentRepository.FirstOrDefaultAsync(p => p.TicketId == ticket.Id, cancellationToken);
             if (payment is not null)
-            {
-                payment.Status = PaymentStatus.Refunded;
                 paymentRepository.Update(payment);
-            }
 
             await walletTransactionRepository.AddAsync(new WalletTransaction
             {

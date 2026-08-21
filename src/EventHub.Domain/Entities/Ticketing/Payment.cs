@@ -15,4 +15,5 @@ public class Payment : BaseEntity
     public decimal Amount { get; set; }
     public PaymentStatus Status { get; set; } = PaymentStatus.Pending;
     public string TransactionCode { get; set; } = string.Empty;
+    public byte[] RowVersion { get; set; } = null!;
 }

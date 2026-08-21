@@ -210,6 +210,33 @@ public class EventServiceTests
     }
 
     [Test]
+    public async Task Cancel_AfterTicketAlreadyCancelled_DoesNotDoubleRefund()
+    {
+        var evt = _db.SeedEvent(organizerId: 10, start: DateTime.UtcNow.AddDays(10), status: EventStatus.Published);
+        _db.CurrentUser.UserId = 20;
+        var type = _db.SeedTicketType(evt.Id, remaining: 4, total: 5);
+        var attendee = _db.SeedAttendee(20, 0m);
+        var ticket = _db.SeedTicket(type.Id, attendee.UserId, price: 100m);
+        _db.Payments.Seed(new Payment
+        {
+            TicketId = ticket.Id,
+            AttendeeId = attendee.UserId,
+            Amount = 100m,
+            Status = PaymentStatus.Completed
+        });
+
+        await _db.CreateTicketService().CancelAsync(ticket.Id);
+        Assert.That(attendee.WalletBalance, Is.EqualTo(100m));
+
+        _db.CurrentUser.UserId = 10;
+        await _db.CreateEventService().CancelAsync(evt.Id);
+
+        Assert.That(attendee.WalletBalance, Is.EqualTo(100m));
+        Assert.That(_db.WalletTransactions.Items.Count(t => t.Type == WalletTransactionType.Refund), Is.EqualTo(1));
+        Assert.That(ticket.Status, Is.EqualTo(TicketStatus.Cancelled));
+    }
+
+    [Test]
     public void Cancel_OtherOrganizer_Throws()
     {
         var evt = _db.SeedEvent(organizerId: 10, status: EventStatus.Published);

@@ -20,8 +20,18 @@ public class UnitOfWork(AppDbContext context) : IUnitOfWork
         return genericRepository;
     }
 
-    public Task<int> SaveChangesAsync(CancellationToken cancellationToken = default) =>
-        context.SaveChangesAsync(cancellationToken);
+    public async Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await context.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            throw new InvalidOperationException(
+                "The data was modified by another request. Please retry.");
+        }
+    }
 
     public void Dispose() => context.Dispose();
 }
