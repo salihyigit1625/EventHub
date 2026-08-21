@@ -1,3 +1,4 @@
+using EventHub.Application.Common;
 using EventHub.Domain.Entities.Identity;
 using EventHub.Domain.Entities.Ticketing;
 using EventHub.Domain.Enums;
@@ -9,29 +10,43 @@ namespace EventHub.Tests.Services;
 public class PaymentAndPermissionServiceTests
 {
     [Test]
-    public async Task PaymentService_GetByTicketId_DoesNotCheckCaller()
+    public async Task PaymentService_GetMyPayments_ReturnsOnlyCurrentUser()
     {
         var db = new TestDb();
-        db.Payments.Seed(new Payment
-        {
-            TicketId = 42,
-            AttendeeId = 20,
-            Amount = 75m,
-            Status = PaymentStatus.Completed,
-            TransactionCode = "tx"
-        });
+        db.CurrentUser.UserId = 20;
+        db.Payments.Seed(
+            new Payment
+            {
+                TicketId = 1,
+                AttendeeId = 20,
+                Amount = 75m,
+                Status = PaymentStatus.Completed,
+                TransactionCode = "mine",
+                CreatedAt = DateTime.UtcNow.AddMinutes(-1)
+            },
+            new Payment
+            {
+                TicketId = 2,
+                AttendeeId = 21,
+                Amount = 50m,
+                Status = PaymentStatus.Completed,
+                TransactionCode = "theirs",
+                CreatedAt = DateTime.UtcNow
+            });
 
-        var dto = await db.CreatePaymentService().GetByTicketIdAsync(42);
+        var page = await db.CreatePaymentService().GetMyPaymentsAsync(new PagingQuery { Page = 1, PageSize = 10 });
 
-        Assert.That(dto.Amount, Is.EqualTo(75m));
-        Assert.That(dto.TicketId, Is.EqualTo(42));
+        Assert.That(page.TotalCount, Is.EqualTo(1));
+        Assert.That(page.Items.Single().TransactionCode, Is.EqualTo("mine"));
+        Assert.That(page.Items.Single().AttendeeId, Is.EqualTo(20));
     }
 
     [Test]
-    public void PaymentService_Missing_Throws()
+    public void PaymentService_GetMyPayments_Unauthenticated_Throws()
     {
         var db = new TestDb();
-        Assert.ThrowsAsync<KeyNotFoundException>(() => db.CreatePaymentService().GetByTicketIdAsync(1));
+        Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            db.CreatePaymentService().GetMyPaymentsAsync(new PagingQuery()));
     }
 
     [Test]

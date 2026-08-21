@@ -133,7 +133,7 @@ public sealed class TestDb
         UnitOfWork,
         CurrentUser);
 
-    public PaymentService CreatePaymentService() => new(Payments, Mapper);
+    public PaymentService CreatePaymentService() => new(Payments, CurrentUser, Mapper);
 
     public PermissionService CreatePermissionService() => new(UserRoles, RolePermissions, Permissions);
 

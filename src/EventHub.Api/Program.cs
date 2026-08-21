@@ -118,6 +118,26 @@ builder.Services.AddRateLimiter(options =>
                 PermitLimit = 60,
                 QueueLimit = 0
             }));
+
+    options.AddPolicy("wallet-strict", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            GetClientIp(httpContext),
+            _ => new FixedWindowRateLimiterOptions
+            {
+                Window = TimeSpan.FromMinutes(1),
+                PermitLimit = 10,
+                QueueLimit = 0
+            }));
+
+    options.AddPolicy("wallet-relaxed", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            GetClientIp(httpContext),
+            _ => new FixedWindowRateLimiterOptions
+            {
+                Window = TimeSpan.FromMinutes(1),
+                PermitLimit = 60,
+                QueueLimit = 0
+            }));
 });
 
 static string GetClientIp(HttpContext context) =>

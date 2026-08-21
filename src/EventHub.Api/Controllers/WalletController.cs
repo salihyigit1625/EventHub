@@ -5,6 +5,7 @@ using EventHub.Application.DTOs.Ticketing;
 using EventHub.Application.Interfaces.Profiles;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace EventHub.Api.Controllers;
 
@@ -15,6 +16,7 @@ public class WalletController(IWalletService walletService) : ControllerBase
 {
     [HttpGet]
     [HasPermission(AppPermissions.WalletView)]
+    [EnableRateLimiting("wallet-relaxed")]
     public async Task<ActionResult<WalletBalanceDto>> GetBalance(CancellationToken cancellationToken)
     {
         var result = await walletService.GetBalanceAsync(cancellationToken);
@@ -23,6 +25,7 @@ public class WalletController(IWalletService walletService) : ControllerBase
 
     [HttpPost("deposit")]
     [HasPermission(AppPermissions.WalletDeposit)]
+    [EnableRateLimiting("wallet-strict")]
     public async Task<ActionResult<WalletBalanceDto>> Deposit(
         [FromBody] DepositDto dto,
         CancellationToken cancellationToken)
@@ -33,6 +36,7 @@ public class WalletController(IWalletService walletService) : ControllerBase
 
     [HttpGet("transactions")]
     [HasPermission(AppPermissions.WalletView)]
+    [EnableRateLimiting("wallet-relaxed")]
     public async Task<ActionResult<PagedResult<WalletTransactionDto>>> GetTransactions(
         [FromQuery] PagingQuery query,
         CancellationToken cancellationToken)
