@@ -212,7 +212,6 @@ public class ValidatorTests
         var result = new UploadDocumentDtoValidator().Validate(new UploadDocumentDto
         {
             OriginalFileName = "a.pdf",
-            ContentType = "application/pdf",
             Content = [1]
         });
         Assert.That(result.IsValid, Is.True);

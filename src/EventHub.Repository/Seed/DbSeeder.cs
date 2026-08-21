@@ -14,6 +14,7 @@ public static class DbSeeder
         if (await db.Roles.AnyAsync(cancellationToken))
         {
             await EnsureMissingPermissionsAsync(db, cancellationToken);
+            await RevokeAttendeeDocumentsDownloadAsync(db, cancellationToken);
             return;
         }
 
@@ -56,7 +57,6 @@ public static class DbSeeder
             AppPermissions.WalletView,
             AppPermissions.WalletDeposit,
             AppPermissions.PaymentsView,
-            AppPermissions.DocumentsDownload,
             AppPermissions.OrganizersView);
         Grant(gateStaffRole,
             AppPermissions.TicketsCheckIn,
@@ -140,6 +140,29 @@ public static class DbSeeder
                 db.RolePermissions.Add(new RolePermission { RoleId = organizerRole.Id, PermissionId = permission.Id });
         }
 
+        await db.SaveChangesAsync(cancellationToken);
+    }
+
+    private static async Task RevokeAttendeeDocumentsDownloadAsync(
+        AppDbContext db,
+        CancellationToken cancellationToken)
+    {
+        var attendeeRole = await db.Roles.FirstOrDefaultAsync(r => r.Name == AppRoles.Attendee, cancellationToken);
+        var permission = await db.Permissions.FirstOrDefaultAsync(
+            p => p.Code == AppPermissions.DocumentsDownload,
+            cancellationToken);
+
+        if (attendeeRole is null || permission is null)
+            return;
+
+        var links = await db.RolePermissions
+            .Where(rp => rp.RoleId == attendeeRole.Id && rp.PermissionId == permission.Id)
+            .ToListAsync(cancellationToken);
+
+        if (links.Count == 0)
+            return;
+
+        db.RolePermissions.RemoveRange(links);
         await db.SaveChangesAsync(cancellationToken);
     }
 }
