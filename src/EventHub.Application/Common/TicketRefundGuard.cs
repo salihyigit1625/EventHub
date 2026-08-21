@@ -24,6 +24,18 @@ public static class TicketRefundGuard
     }
 
     /// <summary>
+    /// Marks a checked-in ticket as refunded (event-cancel path). Returns false if not checked-in.
+    /// </summary>
+    public static bool TryClaimCheckedInTicket(Ticket ticket)
+    {
+        if (ticket.Status != TicketStatus.CheckedIn)
+            return false;
+
+        ticket.Status = TicketStatus.Refunded;
+        return true;
+    }
+
+    /// <summary>
     /// Transitions payment Completed → Refunded. Returns false if already refunded or not completed.
     /// </summary>
     public static bool TryClaimCompletedPayment(Payment? payment)

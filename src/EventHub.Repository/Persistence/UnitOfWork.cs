@@ -33,5 +33,23 @@ public class UnitOfWork(AppDbContext context) : IUnitOfWork
         }
     }
 
+    public async Task<TResult> ExecuteInTransactionAsync<TResult>(
+        Func<CancellationToken, Task<TResult>> action,
+        CancellationToken cancellationToken = default)
+    {
+        await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
+        try
+        {
+            var result = await action(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            return result;
+        }
+        catch
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
+        }
+    }
+
     public void Dispose() => context.Dispose();
 }

@@ -103,17 +103,27 @@ public class EventService(
 
         var ticketTypes = await ticketTypeRepository.FindAsync(t => t.EventId == eventId, cancellationToken);
         var ticketTypeIds = ticketTypes.Select(t => t.Id).ToList();
+        var ticketTypesById = ticketTypes.ToDictionary(t => t.Id);
 
         var tickets = await ticketRepository.FindAsync(
-            t => ticketTypeIds.Contains(t.TicketTypeId) && t.Status == TicketStatus.Paid,
+            t => ticketTypeIds.Contains(t.TicketTypeId)
+                 && (t.Status == TicketStatus.Paid || t.Status == TicketStatus.CheckedIn),
             cancellationToken);
 
         foreach (var ticket in tickets)
         {
-            if (!TicketRefundGuard.TryClaimPaidTicket(ticket, TicketStatus.Refunded))
+            var claimed = TicketRefundGuard.TryClaimPaidTicket(ticket, TicketStatus.Refunded)
+                          || TicketRefundGuard.TryClaimCheckedInTicket(ticket);
+            if (!claimed)
                 continue;
 
             ticketRepository.Update(ticket);
+
+            if (ticketTypesById.TryGetValue(ticket.TicketTypeId, out var ticketType))
+            {
+                ticketType.RemainingQuantity++;
+                ticketTypeRepository.Update(ticketType);
+            }
 
             var payment = await paymentRepository.FirstOrDefaultAsync(p => p.TicketId == ticket.Id, cancellationToken);
             var shouldCreditWallet = TicketRefundGuard.TryClaimCompletedPayment(payment) || payment is null;
