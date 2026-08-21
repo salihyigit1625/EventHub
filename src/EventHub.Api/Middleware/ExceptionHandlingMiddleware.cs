@@ -20,12 +20,13 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
 
     private static async Task WriteProblemAsync(HttpContext context, Exception exception)
     {
-        var (status, title) = exception switch
+        var (status, title, detail) = exception switch
         {
-            KeyNotFoundException => (HttpStatusCode.NotFound, "Resource not found"),
-            UnauthorizedAccessException => (HttpStatusCode.Unauthorized, "Unauthorized"),
-            InvalidOperationException => (HttpStatusCode.BadRequest, "Invalid operation"),
-            _ => (HttpStatusCode.InternalServerError, "An error occurred")
+            KeyNotFoundException => (HttpStatusCode.NotFound, "Resource not found", exception.Message),
+            FileNotFoundException => (HttpStatusCode.NotFound, "Resource not found", "Resource not found."),
+            UnauthorizedAccessException => (HttpStatusCode.Unauthorized, "Unauthorized", exception.Message),
+            InvalidOperationException => (HttpStatusCode.BadRequest, "Invalid operation", exception.Message),
+            _ => (HttpStatusCode.InternalServerError, "An error occurred", "An error occurred.")
         };
 
         context.Response.StatusCode = (int)status;
@@ -36,7 +37,7 @@ public class ExceptionHandlingMiddleware(RequestDelegate next, ILogger<Exception
             type = "about:blank",
             title,
             status = (int)status,
-            detail = exception.Message
+            detail
         };
 
         await context.Response.WriteAsync(JsonSerializer.Serialize(problem));
