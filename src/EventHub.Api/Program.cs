@@ -98,6 +98,26 @@ builder.Services.AddRateLimiter(options =>
                 PermitLimit = 60,
                 QueueLimit = 0
             }));
+
+    options.AddPolicy("tickets-strict", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            GetClientIp(httpContext),
+            _ => new FixedWindowRateLimiterOptions
+            {
+                Window = TimeSpan.FromMinutes(1),
+                PermitLimit = 20,
+                QueueLimit = 0
+            }));
+
+    options.AddPolicy("tickets-relaxed", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            GetClientIp(httpContext),
+            _ => new FixedWindowRateLimiterOptions
+            {
+                Window = TimeSpan.FromMinutes(1),
+                PermitLimit = 60,
+                QueueLimit = 0
+            }));
 });
 
 static string GetClientIp(HttpContext context) =>
