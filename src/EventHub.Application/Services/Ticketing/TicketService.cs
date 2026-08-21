@@ -1,13 +1,9 @@
 using AutoMapper;
 using EventHub.Application.Common;
 using EventHub.Application.DTOs.Ticketing;
-using EventHub.Application.Interfaces.Persistence;
 using EventHub.Application.Interfaces.Identity;
-using EventHub.Application.Interfaces.Events;
-using EventHub.Application.Interfaces.Profiles;
+using EventHub.Application.Interfaces.Persistence;
 using EventHub.Application.Interfaces.Ticketing;
-using EventHub.Application.Interfaces.Admin;
-using EventHub.Application.Interfaces.Storage;
 using EventHub.Domain.Entities.Events;
 using EventHub.Domain.Entities.Profiles;
 using EventHub.Domain.Entities.Ticketing;
@@ -41,6 +37,9 @@ public class TicketService(
             throw new InvalidOperationException("Tickets can only be purchased for published events.");
 
         var now = DateTime.UtcNow;
+        if (now >= eventEntity.StartDate)
+            throw new InvalidOperationException("Tickets cannot be purchased after the event has started.");
+
         if (now < ticketType.SaleStartDate || now > ticketType.SaleEndDate)
             throw new InvalidOperationException("This ticket type is not currently on sale.");
 
@@ -101,8 +100,14 @@ public class TicketService(
 
     public async Task<TicketDto> CancelAsync(int ticketId, CancellationToken cancellationToken = default)
     {
+        var attendeeId = currentUser.UserId
+            ?? throw new UnauthorizedAccessException("Authentication is required.");
+
         var ticket = await ticketRepository.GetByIdAsync(ticketId, cancellationToken)
             ?? throw new KeyNotFoundException($"Ticket ({ticketId}) was not found.");
+
+        if (ticket.AttendeeId != attendeeId)
+            throw new KeyNotFoundException($"Ticket ({ticketId}) was not found.");
 
         if (ticket.Status != TicketStatus.Paid)
             throw new InvalidOperationException("Only paid tickets can be cancelled.");
@@ -112,6 +117,9 @@ public class TicketService(
 
         var eventEntity = await eventRepository.GetByIdAsync(ticketType.EventId, cancellationToken)
             ?? throw new KeyNotFoundException($"Event ({ticketType.EventId}) was not found.");
+
+        if (eventEntity.Status is EventStatus.Cancelled or EventStatus.Completed)
+            throw new InvalidOperationException("Tickets for this event cannot be cancelled.");
 
         var deadline = eventEntity.StartDate.AddHours(-eventEntity.CancellationDeadlineHours);
         if (DateTime.UtcNow > deadline)
@@ -173,8 +181,14 @@ public class TicketService(
 
     public async Task<TicketDto> GetByCodeAsync(string uniqueCode, CancellationToken cancellationToken = default)
     {
+        var attendeeId = currentUser.UserId
+            ?? throw new UnauthorizedAccessException("Authentication is required.");
+
         var ticket = await ticketRepository.FirstOrDefaultAsync(t => t.UniqueCode == uniqueCode, cancellationToken)
             ?? throw new KeyNotFoundException($"Ticket ({uniqueCode}) was not found.");
+
+        if (ticket.AttendeeId != attendeeId)
+            throw new KeyNotFoundException($"Ticket ({uniqueCode}) was not found.");
 
         return mapper.Map<TicketDto>(ticket);
     }

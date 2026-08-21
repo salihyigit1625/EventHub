@@ -44,6 +44,17 @@ public class TicketServiceTests
     }
 
     [Test]
+    public void Purchase_EventAlreadyStarted_Throws()
+    {
+        var evt = _db.SeedEvent(start: DateTime.UtcNow.AddHours(-1));
+        var type = _db.SeedTicketType(evt.Id);
+        _db.SeedAttendee();
+        _db.CurrentUser.UserId = 20;
+
+        Assert.ThrowsAsync<InvalidOperationException>(() => _db.CreateTicketService().PurchaseAsync(type.Id));
+    }
+
+    [Test]
     public void Purchase_OutsideSaleWindow_Throws()
     {
         var evt = _db.SeedEvent();
@@ -107,7 +118,7 @@ public class TicketServiceTests
     }
 
     [Test]
-    public async Task Cancel_DoesNotRequireTicketOwner()
+    public void Cancel_OtherUsersTicket_ThrowsNotFound()
     {
         var evt = _db.SeedEvent(start: DateTime.UtcNow.AddDays(10));
         var type = _db.SeedTicketType(evt.Id, remaining: 0, total: 1);
@@ -115,10 +126,21 @@ public class TicketServiceTests
         var ticket = _db.SeedTicket(type.Id, owner.UserId);
         _db.CurrentUser.UserId = 99;
 
-        var cancelled = await _db.CreateTicketService().CancelAsync(ticket.Id);
+        Assert.ThrowsAsync<KeyNotFoundException>(() => _db.CreateTicketService().CancelAsync(ticket.Id));
+        Assert.That(ticket.Status, Is.EqualTo(TicketStatus.Paid));
+        Assert.That(owner.WalletBalance, Is.EqualTo(0m));
+        Assert.That(type.RemainingQuantity, Is.EqualTo(0));
+    }
 
-        Assert.That(cancelled.Status, Is.EqualTo(TicketStatus.Cancelled));
-        Assert.That(owner.WalletBalance, Is.EqualTo(100m));
+    [Test]
+    public void Cancel_Unauthenticated_Throws()
+    {
+        var evt = _db.SeedEvent(start: DateTime.UtcNow.AddDays(10));
+        var type = _db.SeedTicketType(evt.Id);
+        var attendee = _db.SeedAttendee();
+        var ticket = _db.SeedTicket(type.Id, attendee.UserId);
+
+        Assert.ThrowsAsync<UnauthorizedAccessException>(() => _db.CreateTicketService().CancelAsync(ticket.Id));
     }
 
     [Test]
@@ -140,6 +162,19 @@ public class TicketServiceTests
         var type = _db.SeedTicketType(evt.Id);
         var attendee = _db.SeedAttendee();
         var ticket = _db.SeedTicket(type.Id, attendee.UserId, TicketStatus.CheckedIn);
+        _db.CurrentUser.UserId = attendee.UserId;
+
+        Assert.ThrowsAsync<InvalidOperationException>(() => _db.CreateTicketService().CancelAsync(ticket.Id));
+    }
+
+    [Test]
+    public void Cancel_CancelledEvent_Throws()
+    {
+        var evt = _db.SeedEvent(start: DateTime.UtcNow.AddDays(10), status: EventStatus.Cancelled);
+        var type = _db.SeedTicketType(evt.Id);
+        var attendee = _db.SeedAttendee();
+        var ticket = _db.SeedTicket(type.Id, attendee.UserId);
+        _db.CurrentUser.UserId = attendee.UserId;
 
         Assert.ThrowsAsync<InvalidOperationException>(() => _db.CreateTicketService().CancelAsync(ticket.Id));
     }
@@ -163,16 +198,35 @@ public class TicketServiceTests
     }
 
     [Test]
-    public async Task GetByCode_ReturnsTicket()
+    public async Task GetByCode_OwnTicket_ReturnsTicket()
     {
         _db.SeedTicket(1, 20, code: "abc123");
+        _db.CurrentUser.UserId = 20;
+
         var dto = await _db.CreateTicketService().GetByCodeAsync("abc123");
         Assert.That(dto.UniqueCode, Is.EqualTo("abc123"));
     }
 
     [Test]
+    public void GetByCode_OtherUsersTicket_ThrowsNotFound()
+    {
+        _db.SeedTicket(1, 20, code: "abc123");
+        _db.CurrentUser.UserId = 99;
+
+        Assert.ThrowsAsync<KeyNotFoundException>(() => _db.CreateTicketService().GetByCodeAsync("abc123"));
+    }
+
+    [Test]
     public void GetByCode_Unknown_Throws()
     {
+        _db.CurrentUser.UserId = 20;
         Assert.ThrowsAsync<KeyNotFoundException>(() => _db.CreateTicketService().GetByCodeAsync("missing"));
+    }
+
+    [Test]
+    public void GetByCode_Unauthenticated_Throws()
+    {
+        _db.SeedTicket(1, 20, code: "abc123");
+        Assert.ThrowsAsync<UnauthorizedAccessException>(() => _db.CreateTicketService().GetByCodeAsync("abc123"));
     }
 }

@@ -4,6 +4,7 @@ using EventHub.Application.DTOs.Ticketing;
 using EventHub.Application.Interfaces.Ticketing;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace EventHub.Api.Controllers;
 
@@ -14,6 +15,7 @@ public class TicketsController(ITicketService ticketService) : ControllerBase
     [HttpPost("purchase/{ticketTypeId:int}")]
     [Authorize(Roles = AppRoles.Attendee)]
     [HasPermission(AppPermissions.TicketsPurchase)]
+    [EnableRateLimiting("tickets-strict")]
     public async Task<ActionResult<TicketDto>> Purchase(int ticketTypeId, CancellationToken cancellationToken)
     {
         var result = await ticketService.PurchaseAsync(ticketTypeId, cancellationToken);
@@ -23,6 +25,7 @@ public class TicketsController(ITicketService ticketService) : ControllerBase
     [HttpPost("{id:int}/cancel")]
     [Authorize(Roles = AppRoles.Attendee)]
     [HasPermission(AppPermissions.TicketsCancel)]
+    [EnableRateLimiting("tickets-strict")]
     public async Task<ActionResult<TicketDto>> Cancel(int id, CancellationToken cancellationToken)
     {
         var result = await ticketService.CancelAsync(id, cancellationToken);
@@ -32,6 +35,7 @@ public class TicketsController(ITicketService ticketService) : ControllerBase
     [HttpGet("mine")]
     [Authorize(Roles = AppRoles.Attendee)]
     [HasPermission(AppPermissions.TicketsView)]
+    [EnableRateLimiting("tickets-relaxed")]
     public async Task<ActionResult<PagedResult<TicketDto>>> GetMine(
         [FromQuery] TicketListQuery query,
         CancellationToken cancellationToken)
@@ -41,8 +45,9 @@ public class TicketsController(ITicketService ticketService) : ControllerBase
     }
 
     [HttpGet("by-code/{uniqueCode}")]
-    [Authorize(Roles = $"{AppRoles.Attendee},{AppRoles.GateStaff}")]
+    [Authorize(Roles = AppRoles.Attendee)]
     [HasPermission(AppPermissions.TicketsView)]
+    [EnableRateLimiting("tickets-relaxed")]
     public async Task<ActionResult<TicketDto>> GetByCode(string uniqueCode, CancellationToken cancellationToken)
     {
         var result = await ticketService.GetByCodeAsync(uniqueCode, cancellationToken);
