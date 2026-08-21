@@ -182,6 +182,19 @@ public class ValidatorTests
     }
 
     [Test]
+    public void Deposit_AboveMax_IsInvalid()
+    {
+        Assert.That(new DepositDtoValidator().Validate(new DepositDto
+        {
+            Amount = WalletDefaults.MaxDepositAmount
+        }).IsValid, Is.True);
+        Assert.That(new DepositDtoValidator().Validate(new DepositDto
+        {
+            Amount = WalletDefaults.MaxDepositAmount + 0.01m
+        }).IsValid, Is.False);
+    }
+
+    [Test]
     public void UploadPoster_EmptyContent_IsInvalid()
     {
         var result = new UploadEventPosterDtoValidator().Validate(new UploadEventPosterDto

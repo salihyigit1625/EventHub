@@ -1,8 +1,9 @@
+using EventHub.Application.Common;
 using EventHub.Application.DTOs.Ticketing;
 
 namespace EventHub.Application.Interfaces.Ticketing;
 
 public interface IPaymentService
 {
-    Task<PaymentDto> GetByTicketIdAsync(int ticketId, CancellationToken cancellationToken = default);
+    Task<PagedResult<PaymentDto>> GetMyPaymentsAsync(PagingQuery query, CancellationToken cancellationToken = default);
 }
