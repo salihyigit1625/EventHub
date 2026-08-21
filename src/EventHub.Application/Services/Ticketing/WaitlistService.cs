@@ -88,15 +88,11 @@ public class WaitlistService(
             var now = DateTime.UtcNow;
             if (entry.ExpiresAt is not null && entry.ExpiresAt < now)
             {
-                entry.Status = WaitlistStatus.Expired;
-                waitlistRepository.Update(entry);
-
                 var heldType = await ticketTypeRepository.GetByIdAsync(entry.TicketTypeId, ct);
+                WaitlistHoldGuard.TryExpireHold(entry, heldType, now);
+                waitlistRepository.Update(entry);
                 if (heldType is not null)
-                {
-                    heldType.RemainingQuantity++;
                     ticketTypeRepository.Update(heldType);
-                }
 
                 await unitOfWork.SaveChangesAsync(ct);
                 throw new InvalidOperationException("This waitlist offer has expired.");
@@ -189,8 +185,9 @@ public class WaitlistService(
         foreach (var expired in entries.Where(e =>
                      e.Status == WaitlistStatus.Notified && e.ExpiresAt is not null && e.ExpiresAt < now))
         {
-            expired.Status = WaitlistStatus.Expired;
-            ticketType.RemainingQuantity++;
+            if (!WaitlistHoldGuard.TryExpireHold(expired, ticketType, now))
+                continue;
+
             waitlistRepository.Update(expired);
         }
 

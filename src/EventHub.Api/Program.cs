@@ -2,7 +2,9 @@ using EventHub.Api.Authorization;
 using EventHub.Api.Extensions;
 using EventHub.Api.Filters;
 using EventHub.Api.Middleware;
+using EventHub.Api.Workers;
 using EventHub.Application;
+using EventHub.Application.Workers;
 using EventHub.Repository;
 using EventHub.Repository.Context;
 using EventHub.Repository.Seed;
@@ -24,6 +26,8 @@ builder.Services.AddCors(options =>
 builder.Services.AddApplication();
 builder.Services.AddRepository(builder.Configuration);
 builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.Configure<WorkerOptions>(builder.Configuration.GetSection(WorkerOptions.SectionName));
+builder.Services.AddHostedService<EventHubWorkerHostedService>();
 builder.Services.AddPermissionPolicies();
 builder.Services.AddRateLimiter(options =>
 {

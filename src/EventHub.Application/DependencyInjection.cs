@@ -3,12 +3,14 @@ using EventHub.Application.Interfaces.Events;
 using EventHub.Application.Interfaces.Identity;
 using EventHub.Application.Interfaces.Profiles;
 using EventHub.Application.Interfaces.Ticketing;
+using EventHub.Application.Interfaces.Workers;
 using EventHub.Application.Mappings;
 using EventHub.Application.Services.Admin;
 using EventHub.Application.Services.Events;
 using EventHub.Application.Services.Identity;
 using EventHub.Application.Services.Profiles;
 using EventHub.Application.Services.Ticketing;
+using EventHub.Application.Services.Workers;
 using EventHub.Application.Validations.Identity;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
@@ -35,6 +37,9 @@ public static class DependencyInjection
         services.AddScoped<IWalletService, WalletService>();
         services.AddScoped<IGateStaffService, GateStaffService>();
         services.AddScoped<IDocumentService, DocumentService>();
+
+        services.AddScoped<IEventCompletionJob, EventCompletionJob>();
+        services.AddScoped<IWaitlistHoldExpiryJob, WaitlistHoldExpiryJob>();
 
         return services;
     }

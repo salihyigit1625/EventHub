@@ -280,6 +280,33 @@ public class EventServiceTests
     }
 
     [Test]
+    public void Cancel_CompletedEvent_Throws()
+    {
+        var evt = _db.SeedEvent(organizerId: 10, status: EventStatus.Completed);
+        _db.CurrentUser.UserId = 10;
+
+        Assert.ThrowsAsync<InvalidOperationException>(() => _db.CreateEventService().CancelAsync(evt.Id));
+    }
+
+    [Test]
+    public void Update_CompletedEvent_Throws()
+    {
+        var evt = _db.SeedEvent(organizerId: 10, status: EventStatus.Completed);
+        _db.CurrentUser.UserId = 10;
+
+        Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _db.CreateEventService().UpdateAsync(evt.Id, new UpdateEventDto
+            {
+                Title = "Nope",
+                Venue = evt.Venue,
+                Description = evt.Description,
+                StartDate = evt.StartDate,
+                EndDate = evt.EndDate,
+                CancellationDeadlineHours = evt.CancellationDeadlineHours
+            }));
+    }
+
+    [Test]
     public void GetById_Draft_Anonymous_Throws()
     {
         var evt = _db.SeedEvent(status: EventStatus.Draft);

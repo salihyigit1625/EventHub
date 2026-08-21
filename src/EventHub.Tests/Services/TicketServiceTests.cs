@@ -257,4 +257,45 @@ public class TicketServiceTests
         _db.SeedTicket(1, 20, code: "abc123");
         Assert.ThrowsAsync<UnauthorizedAccessException>(() => _db.CreateTicketService().GetByCodeAsync("abc123"));
     }
+
+    [Test]
+    public void Purchase_CheckedInTicket_CountsTowardLimit()
+    {
+        var evt = _db.SeedEvent();
+        var type = _db.SeedTicketType(evt.Id, remaining: 5, maxTicketsPerUser: 1);
+        _db.SeedAttendee(20, 500m);
+        _db.SeedTicket(type.Id, 20, TicketStatus.CheckedIn);
+        _db.CurrentUser.UserId = 20;
+
+        Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _db.CreateTicketService().PurchaseAsync(type.Id));
+    }
+
+    [Test]
+    public void Cancel_CompletedEvent_Throws()
+    {
+        var evt = _db.SeedEvent(start: DateTime.UtcNow.AddDays(10), status: EventStatus.Completed);
+        var type = _db.SeedTicketType(evt.Id, remaining: 4, total: 5);
+        var ticket = _db.SeedTicket(type.Id, 20);
+        _db.CurrentUser.UserId = 20;
+
+        Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _db.CreateTicketService().CancelAsync(ticket.Id));
+    }
+
+    [Test]
+    public async Task Purchase_CompletesInventoryWalletAndPayment()
+    {
+        var evt = _db.SeedEvent();
+        var type = _db.SeedTicketType(evt.Id, remaining: 3, price: 10m);
+        _db.SeedAttendee(20, 100m);
+        _db.CurrentUser.UserId = 20;
+
+        await _db.CreateTicketService().PurchaseAsync(type.Id);
+
+        Assert.That(_db.Tickets.Items, Has.Count.EqualTo(1));
+        Assert.That(_db.Payments.Items, Has.Count.EqualTo(1));
+        Assert.That(_db.WalletTransactions.Items, Has.Count.EqualTo(1));
+        Assert.That(type.RemainingQuantity, Is.EqualTo(2));
+    }
 }

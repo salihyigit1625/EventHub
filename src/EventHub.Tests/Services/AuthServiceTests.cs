@@ -280,4 +280,118 @@ public class AuthServiceTests
         _db.CurrentUser.UserId = 99;
         Assert.ThrowsAsync<KeyNotFoundException>(() => _db.CreateAuthService().GetCurrentUserAsync());
     }
+
+    [Test]
+    public void GetCurrentUser_Unauthenticated_Throws()
+    {
+        Assert.ThrowsAsync<UnauthorizedAccessException>(() => _db.CreateAuthService().GetCurrentUserAsync());
+    }
+
+    [Test]
+    public async Task Login_UnknownEmailAndWrongPassword_UseSameMessage()
+    {
+        await _db.CreateAuthService().RegisterAttendeeAsync(new RegisterAttendeeDto
+        {
+            Email = "ada@eventhub.local",
+            Password = "Secret1!",
+            FullName = "Ada"
+        });
+
+        var unknown = Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            _db.CreateAuthService().LoginAsync(new LoginDto
+            {
+                Email = "missing@eventhub.local",
+                Password = "Secret1!"
+            }));
+        var wrong = Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            _db.CreateAuthService().LoginAsync(new LoginDto
+            {
+                Email = "ada@eventhub.local",
+                Password = "wrong"
+            }));
+
+        Assert.That(unknown!.Message, Is.EqualTo(wrong!.Message));
+        Assert.That(unknown.Message, Is.EqualTo("Invalid email or password."));
+    }
+
+    [Test]
+    public async Task Login_InactiveUser_UsesSameGenericMessage()
+    {
+        await _db.CreateAuthService().RegisterAttendeeAsync(new RegisterAttendeeDto
+        {
+            Email = "ada@eventhub.local",
+            Password = "Secret1!",
+            FullName = "Ada"
+        });
+        _db.Users.Items[0].IsActive = false;
+
+        var inactive = Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            _db.CreateAuthService().LoginAsync(new LoginDto
+            {
+                Email = "ada@eventhub.local",
+                Password = "Secret1!"
+            }));
+        var unknown = Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            _db.CreateAuthService().LoginAsync(new LoginDto
+            {
+                Email = "nope@eventhub.local",
+                Password = "Secret1!"
+            }));
+
+        Assert.That(inactive!.Message, Is.EqualTo(unknown!.Message));
+    }
+
+    [Test]
+    public void RegisterOrganizer_DuplicateEmail_ThrowsGenericMessage()
+    {
+        _db.Users.Seed(new User { Email = "org@eventhub.local", FullName = "Existing" });
+
+        var ex = Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _db.CreateAuthService().RegisterOrganizerAsync(new RegisterOrganizerDto
+            {
+                Email = "ORG@eventhub.local",
+                Password = "Secret1!",
+                FullName = "Org",
+                CompanyName = "Co"
+            }));
+
+        Assert.That(ex!.Message, Is.EqualTo(AuthMessages.RegistrationFailed));
+    }
+
+    [Test]
+    public async Task RefreshToken_ReusedAfterRotation_Throws()
+    {
+        var registered = await _db.CreateAuthService().RegisterAttendeeAsync(new RegisterAttendeeDto
+        {
+            Email = "ada@eventhub.local",
+            Password = "Secret1!",
+            FullName = "Ada"
+        });
+        var oldRefresh = registered.RefreshToken;
+
+        await _db.CreateAuthService().RefreshTokenAsync(new RefreshTokenRequestDto
+        {
+            RefreshToken = oldRefresh
+        });
+
+        Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            _db.CreateAuthService().RefreshTokenAsync(new RefreshTokenRequestDto
+            {
+                RefreshToken = oldRefresh
+            }));
+    }
+
+    [Test]
+    public async Task RegisterAttendee_StoresHashedPassword_NotPlaintext()
+    {
+        await _db.CreateAuthService().RegisterAttendeeAsync(new RegisterAttendeeDto
+        {
+            Email = "ada@eventhub.local",
+            Password = "Secret1!",
+            FullName = "Ada"
+        });
+
+        Assert.That(_db.Users.Items[0].PasswordHash, Is.Not.EqualTo("Secret1!"));
+        Assert.That(_db.Users.Items[0].PasswordHash, Is.Not.Empty);
+    }
 }

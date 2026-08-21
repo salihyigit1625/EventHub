@@ -182,4 +182,38 @@ public class GateStaffServiceTests
         Assert.That(dto.AssignedEventId, Is.EqualTo(evt.Id));
         Assert.That(dto.AssignedEventTitle, Is.EqualTo(evt.Title));
     }
+
+    [Test]
+    public async Task CheckIn_CompletedEvent_Fails()
+    {
+        var evt = _db.SeedEvent(start: DateTime.UtcNow.AddHours(-1), status: EventStatus.Completed);
+        var type = _db.SeedTicketType(evt.Id);
+        var ticket = _db.SeedTicket(type.Id, 20, code: "SCANME");
+        _db.CurrentUser.UserId = 30;
+        _db.GateStaff.Seed(new GateStaffProfile { UserId = 30, AssignedEventId = evt.Id });
+
+        var result = await _db.CreateGateStaffService().CheckInAsync(new CheckInTicketDto { UniqueCode = "SCANME" });
+
+        Assert.That(result.IsSuccessful, Is.False);
+        Assert.That(result.FailureReason, Is.EqualTo("Event is not open for check-in."));
+        Assert.That(ticket.Status, Is.EqualTo(TicketStatus.Paid));
+    }
+
+    [Test]
+    public async Task CheckIn_ClaimFailsWhenAlreadyCheckedInMidFlow()
+    {
+        var evt = _db.SeedEvent(start: DateTime.UtcNow.AddHours(-1));
+        var type = _db.SeedTicketType(evt.Id);
+        var ticket = _db.SeedTicket(type.Id, 20, TicketStatus.Paid, code: "SCANME");
+        _db.CurrentUser.UserId = 30;
+        _db.GateStaff.Seed(new GateStaffProfile { UserId = 30, AssignedEventId = evt.Id });
+
+        var first = await _db.CreateGateStaffService().CheckInAsync(new CheckInTicketDto { UniqueCode = "SCANME" });
+        var second = await _db.CreateGateStaffService().CheckInAsync(new CheckInTicketDto { UniqueCode = "SCANME" });
+
+        Assert.That(first.IsSuccessful, Is.True);
+        Assert.That(second.IsSuccessful, Is.False);
+        Assert.That(second.FailureReason, Is.EqualTo("Ticket has already been checked in."));
+        Assert.That(ticket.Status, Is.EqualTo(TicketStatus.CheckedIn));
+    }
 }

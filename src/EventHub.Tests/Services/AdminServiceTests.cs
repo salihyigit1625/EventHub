@@ -196,4 +196,36 @@ public class AdminServiceTests
                 EventId = evt.Id
             }));
     }
+
+    [Test]
+    public void AssignGateStaffToEvent_DraftEvent_Throws()
+    {
+        var evt = _db.SeedEvent(status: EventStatus.Draft);
+        _db.Users.Seed(new User { Id = 30, Email = "gate@eventhub.local", FullName = "Gate" });
+        _db.GateStaff.Seed(new GateStaffProfile { UserId = 30 });
+        _db.UserRoles.Seed(new UserRole { UserId = 30, RoleId = 4 });
+
+        Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _db.CreateAdminService().AssignGateStaffToEventAsync(new AssignGateStaffDto
+            {
+                GateStaffUserId = 30,
+                EventId = evt.Id
+            }));
+    }
+
+    [Test]
+    public void AssignGateStaffToEvent_CompletedEvent_Throws()
+    {
+        var evt = _db.SeedEvent(status: EventStatus.Completed);
+        _db.Users.Seed(new User { Id = 30, Email = "gate@eventhub.local", FullName = "Gate" });
+        _db.GateStaff.Seed(new GateStaffProfile { UserId = 30 });
+        _db.UserRoles.Seed(new UserRole { UserId = 30, RoleId = 4 });
+
+        Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _db.CreateAdminService().AssignGateStaffToEventAsync(new AssignGateStaffDto
+            {
+                GateStaffUserId = 30,
+                EventId = evt.Id
+            }));
+    }
 }

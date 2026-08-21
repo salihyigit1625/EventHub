@@ -32,4 +32,29 @@ public class TicketRefundGuardTests
     {
         Assert.That(TicketRefundGuard.TryClaimCompletedPayment(null), Is.False);
     }
+
+    [Test]
+    public void TryClaimCheckedInTicket_OnlySucceedsOnce()
+    {
+        var ticket = new Ticket { Status = TicketStatus.CheckedIn };
+
+        Assert.That(TicketRefundGuard.TryClaimCheckedInTicket(ticket), Is.True);
+        Assert.That(ticket.Status, Is.EqualTo(TicketStatus.Refunded));
+        Assert.That(TicketRefundGuard.TryClaimCheckedInTicket(ticket), Is.False);
+    }
+
+    [Test]
+    public void TryClaimPaidTicket_InvalidTerminalStatus_Throws()
+    {
+        var ticket = new Ticket { Status = TicketStatus.Paid };
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            TicketRefundGuard.TryClaimPaidTicket(ticket, TicketStatus.CheckedIn));
+    }
+
+    [Test]
+    public void TryClaimPaidTicket_NonPaid_ReturnsFalse()
+    {
+        var ticket = new Ticket { Status = TicketStatus.Reserved };
+        Assert.That(TicketRefundGuard.TryClaimPaidTicket(ticket, TicketStatus.Cancelled), Is.False);
+    }
 }

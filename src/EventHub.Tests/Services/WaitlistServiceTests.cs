@@ -391,4 +391,129 @@ public class WaitlistServiceTests
         Assert.That(page.TotalCount, Is.EqualTo(1));
         Assert.That(page.Items.Single().AttendeeId, Is.EqualTo(20));
     }
+
+    [Test]
+    public void Convert_ExpiredOffer_ReleasesReservedStock()
+    {
+        var evt = _db.SeedEvent();
+        var type = _db.SeedTicketType(evt.Id, remaining: 0, price: 50m);
+        _db.SeedAttendee(20, 80m);
+        _db.CurrentUser.UserId = 20;
+        _db.Waitlists.Seed(new Waitlist
+        {
+            EventId = evt.Id,
+            TicketTypeId = type.Id,
+            AttendeeId = 20,
+            Status = WaitlistStatus.Notified,
+            ExpiresAt = DateTime.UtcNow.AddMinutes(-1)
+        });
+
+        Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _db.CreateWaitlistService().ConvertAsync(_db.Waitlists.Items[0].Id));
+        Assert.That(_db.Waitlists.Items[0].Status, Is.EqualTo(WaitlistStatus.Expired));
+        Assert.That(type.RemainingQuantity, Is.EqualTo(1));
+    }
+
+    [Test]
+    public void Convert_OutsideSaleWindow_Throws()
+    {
+        var evt = _db.SeedEvent();
+        var type = _db.SeedTicketType(
+            evt.Id,
+            remaining: 0,
+            price: 50m,
+            saleStart: DateTime.UtcNow.AddDays(1),
+            saleEnd: DateTime.UtcNow.AddDays(5));
+        _db.SeedAttendee(20, 500m);
+        _db.CurrentUser.UserId = 20;
+        _db.Waitlists.Seed(new Waitlist
+        {
+            EventId = evt.Id,
+            TicketTypeId = type.Id,
+            AttendeeId = 20,
+            Status = WaitlistStatus.Notified,
+            ExpiresAt = DateTime.UtcNow.AddMinutes(10)
+        });
+
+        Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _db.CreateWaitlistService().ConvertAsync(_db.Waitlists.Items[0].Id));
+    }
+
+    [Test]
+    public void Convert_AfterEventStarted_Throws()
+    {
+        var evt = _db.SeedEvent(start: DateTime.UtcNow.AddHours(-1));
+        var type = _db.SeedTicketType(evt.Id, remaining: 0, price: 50m);
+        _db.SeedAttendee(20, 500m);
+        _db.CurrentUser.UserId = 20;
+        _db.Waitlists.Seed(new Waitlist
+        {
+            EventId = evt.Id,
+            TicketTypeId = type.Id,
+            AttendeeId = 20,
+            Status = WaitlistStatus.Notified,
+            ExpiresAt = DateTime.UtcNow.AddMinutes(10)
+        });
+
+        Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _db.CreateWaitlistService().ConvertAsync(_db.Waitlists.Items[0].Id));
+    }
+
+    [Test]
+    public void Convert_UnpublishedEvent_Throws()
+    {
+        var evt = _db.SeedEvent(status: EventStatus.Draft);
+        var type = _db.SeedTicketType(evt.Id, remaining: 0, price: 50m);
+        _db.SeedAttendee(20, 500m);
+        _db.CurrentUser.UserId = 20;
+        _db.Waitlists.Seed(new Waitlist
+        {
+            EventId = evt.Id,
+            TicketTypeId = type.Id,
+            AttendeeId = 20,
+            Status = WaitlistStatus.Notified,
+            ExpiresAt = DateTime.UtcNow.AddMinutes(10)
+        });
+
+        Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _db.CreateWaitlistService().ConvertAsync(_db.Waitlists.Items[0].Id));
+    }
+
+    [Test]
+    public void Convert_AtPerUserLimit_Throws()
+    {
+        var evt = _db.SeedEvent();
+        var type = _db.SeedTicketType(evt.Id, remaining: 0, price: 50m, maxTicketsPerUser: 1);
+        _db.SeedAttendee(20, 500m);
+        _db.SeedTicket(type.Id, 20);
+        _db.CurrentUser.UserId = 20;
+        _db.Waitlists.Seed(new Waitlist
+        {
+            EventId = evt.Id,
+            TicketTypeId = type.Id,
+            AttendeeId = 20,
+            Status = WaitlistStatus.Notified,
+            ExpiresAt = DateTime.UtcNow.AddMinutes(10)
+        });
+
+        Assert.ThrowsAsync<InvalidOperationException>(() =>
+            _db.CreateWaitlistService().ConvertAsync(_db.Waitlists.Items[0].Id));
+    }
+
+    [Test]
+    public void NotifyNext_Unauthenticated_Throws()
+    {
+        var evt = _db.SeedEvent(organizerId: 10);
+        var type = _db.SeedTicketType(evt.Id, remaining: 1);
+        _db.Waitlists.Seed(new Waitlist
+        {
+            EventId = evt.Id,
+            TicketTypeId = type.Id,
+            AttendeeId = 20,
+            Status = WaitlistStatus.Waiting
+        });
+
+        Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            _db.CreateWaitlistService().NotifyNextAsync(type.Id));
+    }
 }

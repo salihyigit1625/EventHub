@@ -68,4 +68,18 @@ public class WalletServiceTests
         Assert.That(page.Items, Has.Count.EqualTo(1));
         Assert.That(page.Items[0].Amount, Is.EqualTo(2m));
     }
+
+    [Test]
+    public void GetBalance_Unauthenticated_Throws()
+    {
+        Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            _db.CreateWalletService().GetBalanceAsync());
+    }
+
+    [Test]
+    public void GetTransactions_Unauthenticated_Throws()
+    {
+        Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            _db.CreateWalletService().GetTransactionsAsync(new PagingQuery()));
+    }
 }
