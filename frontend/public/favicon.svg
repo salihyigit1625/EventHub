@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <rect width="64" height="64" rx="14" fill="#0b1220"/>
+  <defs>
+    <linearGradient id="eh" x1="8" y1="12" x2="56" y2="52" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#9b4dff"/>
+      <stop offset="0.55" stop-color="#5ecbff"/>
+      <stop offset="1" stop-color="#00e5ff"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(32 30) scale(14)">
+      <stop stop-color="#7ef9ff" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="#7ef9ff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <circle cx="32" cy="30" r="14" fill="url(#glow)"/>
+  <path stroke="url(#eh)" stroke-width="3.2" stroke-linecap="round" d="M18 38c0-10 6-18 14-18"/>
+  <path stroke="url(#eh)" stroke-width="3.2" stroke-linecap="round" d="M14 40c0-13 8-22 18-22"/>
+  <path stroke="url(#eh)" stroke-width="3.2" stroke-linecap="round" d="M10 42c0-16 10-26 22-26"/>
+  <path stroke="url(#eh)" stroke-width="3.2" stroke-linecap="round" d="M46 38c0-10-6-18-14-18"/>
+  <path stroke="url(#eh)" stroke-width="3.2" stroke-linecap="round" d="M50 40c0-13-8-22-18-22"/>
+  <path stroke="url(#eh)" stroke-width="3.2" stroke-linecap="round" d="M54 42c0-16-10-26-22-26"/>
+  <path stroke="url(#eh)" stroke-width="3.2" stroke-linecap="round" d="M28 24v20M36 24v20M28 34h16"/>
+</svg>

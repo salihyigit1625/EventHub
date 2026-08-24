@@ -1,0 +1,1289 @@
+{
+  "openapi": "3.0.1",
+  "info": {
+    "title": "EventHub API",
+    "version": "v1"
+  },
+  "servers": [
+    { "url": "http://localhost:5170" }
+  ],
+  "paths": {
+    "/api/auth/register/attendee": {
+      "post": {
+        "tags": ["Auth"],
+        "operationId": "registerAttendee",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RegisterAttendeeDto" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AuthResponseDto" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/register/organizer": {
+      "post": {
+        "tags": ["Auth"],
+        "operationId": "registerOrganizer",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RegisterOrganizerDto" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AuthResponseDto" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": ["Auth"],
+        "operationId": "login",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/LoginDto" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AuthResponseDto" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/refresh": {
+      "post": {
+        "tags": ["Auth"],
+        "operationId": "refreshToken",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/RefreshTokenRequestDto" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AuthResponseDto" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "tags": ["Auth"],
+        "operationId": "logout",
+        "responses": { "204": { "description": "No Content" } }
+      }
+    },
+    "/api/auth/me": {
+      "get": {
+        "tags": ["Auth"],
+        "operationId": "getCurrentUser",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CurrentUserDto" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/events": {
+      "get": {
+        "tags": ["Events"],
+        "operationId": "getPublishedEvents",
+        "parameters": [
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/PageSize" },
+          { "name": "search", "in": "query", "schema": { "type": "string" } },
+          { "name": "venue", "in": "query", "schema": { "type": "string" } },
+          { "name": "from", "in": "query", "schema": { "type": "string", "format": "date-time" } },
+          { "name": "to", "in": "query", "schema": { "type": "string", "format": "date-time" } },
+          { "name": "status", "in": "query", "schema": { "$ref": "#/components/schemas/EventStatus" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PagedEventListItemDto" }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Events"],
+        "operationId": "createEvent",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateEventDto" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/EventDto" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/events/{id}": {
+      "get": {
+        "tags": ["Events"],
+        "operationId": "getEventById",
+        "parameters": [{ "$ref": "#/components/parameters/Id" }],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/EventDto" }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["Events"],
+        "operationId": "updateEvent",
+        "parameters": [{ "$ref": "#/components/parameters/Id" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateEventDto" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/EventDto" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/events/mine": {
+      "get": {
+        "tags": ["Events"],
+        "operationId": "getMyEvents",
+        "parameters": [
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/PageSize" },
+          { "name": "search", "in": "query", "schema": { "type": "string" } },
+          { "name": "venue", "in": "query", "schema": { "type": "string" } },
+          { "name": "from", "in": "query", "schema": { "type": "string", "format": "date-time" } },
+          { "name": "to", "in": "query", "schema": { "type": "string", "format": "date-time" } },
+          { "name": "status", "in": "query", "schema": { "$ref": "#/components/schemas/EventStatus" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PagedEventListItemDto" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/events/{id}/publish": {
+      "post": {
+        "tags": ["Events"],
+        "operationId": "publishEvent",
+        "parameters": [{ "$ref": "#/components/parameters/Id" }],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/EventDto" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/events/{id}/cancel": {
+      "post": {
+        "tags": ["Events"],
+        "operationId": "cancelEvent",
+        "parameters": [{ "$ref": "#/components/parameters/Id" }],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/EventDto" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/events/{id}/poster": {
+      "get": {
+        "tags": ["Events"],
+        "operationId": "getEventPoster",
+        "parameters": [{ "$ref": "#/components/parameters/Id" }],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "image/jpeg": { "schema": { "type": "string", "format": "binary" } },
+              "image/png": { "schema": { "type": "string", "format": "binary" } }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Events"],
+        "operationId": "uploadEventPoster",
+        "parameters": [{ "$ref": "#/components/parameters/Id" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["file"],
+                "properties": {
+                  "file": { "type": "string", "format": "binary" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/EventDto" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/events/{eventId}/ticket-types": {
+      "get": {
+        "tags": ["TicketTypes"],
+        "operationId": "getTicketTypesByEvent",
+        "parameters": [
+          { "name": "eventId", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/TicketTypeDto" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ticket-types": {
+      "post": {
+        "tags": ["TicketTypes"],
+        "operationId": "createTicketType",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateTicketTypeDto" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TicketTypeDto" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/ticket-types/{id}": {
+      "put": {
+        "tags": ["TicketTypes"],
+        "operationId": "updateTicketType",
+        "parameters": [{ "$ref": "#/components/parameters/Id" }],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateTicketTypeDto" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TicketTypeDto" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tickets/purchase/{ticketTypeId}": {
+      "post": {
+        "tags": ["Tickets"],
+        "operationId": "purchaseTicket",
+        "parameters": [
+          { "name": "ticketTypeId", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TicketDto" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tickets/{id}/cancel": {
+      "post": {
+        "tags": ["Tickets"],
+        "operationId": "cancelTicket",
+        "parameters": [{ "$ref": "#/components/parameters/Id" }],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TicketDto" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tickets/mine": {
+      "get": {
+        "tags": ["Tickets"],
+        "operationId": "getMyTickets",
+        "parameters": [
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/PageSize" },
+          { "name": "status", "in": "query", "schema": { "$ref": "#/components/schemas/TicketStatus" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PagedTicketDto" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/tickets/by-code/{uniqueCode}": {
+      "get": {
+        "tags": ["Tickets"],
+        "operationId": "getTicketByCode",
+        "parameters": [
+          { "name": "uniqueCode", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TicketDto" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/waitlist/join/{ticketTypeId}": {
+      "post": {
+        "tags": ["Waitlist"],
+        "operationId": "joinWaitlist",
+        "parameters": [
+          { "name": "ticketTypeId", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/WaitlistDto" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/waitlist/ticket-types/{ticketTypeId}/notify-next": {
+      "post": {
+        "tags": ["Waitlist"],
+        "operationId": "notifyNextWaitlist",
+        "parameters": [
+          { "name": "ticketTypeId", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/WaitlistDto" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/waitlist/{id}/convert": {
+      "post": {
+        "tags": ["Waitlist"],
+        "operationId": "convertWaitlist",
+        "parameters": [{ "$ref": "#/components/parameters/Id" }],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/TicketDto" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/waitlist/mine": {
+      "get": {
+        "tags": ["Waitlist"],
+        "operationId": "getMyWaitlist",
+        "parameters": [
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/PageSize" },
+          { "name": "status", "in": "query", "schema": { "$ref": "#/components/schemas/WaitlistStatus" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PagedWaitlistDto" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/wallet": {
+      "get": {
+        "tags": ["Wallet"],
+        "operationId": "getWalletBalance",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/WalletBalanceDto" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/wallet/deposit": {
+      "post": {
+        "tags": ["Wallet"],
+        "operationId": "depositWallet",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/DepositDto" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/WalletBalanceDto" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/wallet/transactions": {
+      "get": {
+        "tags": ["Wallet"],
+        "operationId": "getWalletTransactions",
+        "parameters": [
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/PageSize" }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PagedWalletTransactionDto" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/payments/mine": {
+      "get": {
+        "tags": ["Payments"],
+        "operationId": "getMyPayments",
+        "parameters": [
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/PageSize" }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PagedPaymentDto" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/documents": {
+      "get": {
+        "tags": ["Documents"],
+        "operationId": "getMyDocuments",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/DocumentDto" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Documents"],
+        "operationId": "uploadDocument",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["file"],
+                "properties": {
+                  "file": { "type": "string", "format": "binary" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/DocumentDto" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/documents/{id}": {
+      "get": {
+        "tags": ["Documents"],
+        "operationId": "downloadDocument",
+        "parameters": [{ "$ref": "#/components/parameters/Id" }],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/octet-stream": {
+                "schema": { "type": "string", "format": "binary" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/organizers/{userId}": {
+      "get": {
+        "tags": ["Organizers"],
+        "operationId": "getOrganizerProfile",
+        "parameters": [
+          { "name": "userId", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/OrganizerProfileDto" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/organizers/me": {
+      "put": {
+        "tags": ["Organizers"],
+        "operationId": "updateOrganizerProfile",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateOrganizerProfileDto" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/OrganizerProfileDto" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/gate-staff/check-in": {
+      "post": {
+        "tags": ["GateStaff"],
+        "operationId": "checkInTicket",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CheckInTicketDto" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/CheckInResultDto" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/gate-staff/assigned-event": {
+      "get": {
+        "tags": ["GateStaff"],
+        "operationId": "getAssignedEvent",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/GateStaffProfileDto" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/organizers/pending": {
+      "get": {
+        "tags": ["Admin"],
+        "operationId": "getPendingApprovals",
+        "parameters": [
+          { "$ref": "#/components/parameters/Page" },
+          { "$ref": "#/components/parameters/PageSize" }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PagedOrganizerProfileDto" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/organizers/{userId}/approve": {
+      "post": {
+        "tags": ["Admin"],
+        "operationId": "approveOrganizer",
+        "parameters": [
+          { "name": "userId", "in": "path", "required": true, "schema": { "type": "integer" } }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/OrganizerProfileDto" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/stats": {
+      "get": {
+        "tags": ["Admin"],
+        "operationId": "getGlobalStats",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/GlobalStatsDto" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/gate-staff": {
+      "post": {
+        "tags": ["Admin"],
+        "operationId": "createGateStaff",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateGateStaffDto" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/GateStaffProfileDto" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/admin/gate-staff/assign": {
+      "post": {
+        "tags": ["Admin"],
+        "operationId": "assignGateStaff",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/AssignGateStaffDto" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/GateStaffProfileDto" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "Id": {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "integer" }
+      },
+      "Page": {
+        "name": "page",
+        "in": "query",
+        "schema": { "type": "integer", "default": 1 }
+      },
+      "PageSize": {
+        "name": "pageSize",
+        "in": "query",
+        "schema": { "type": "integer", "default": 10 }
+      }
+    },
+    "securitySchemes": {
+      "Bearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    },
+    "schemas": {
+      "EventStatus": { "type": "integer", "enum": [1, 2, 3, 4] },
+      "TicketStatus": { "type": "integer", "enum": [1, 2, 3, 4, 5] },
+      "WaitlistStatus": { "type": "integer", "enum": [1, 2, 3, 4] },
+      "PaymentStatus": { "type": "integer", "enum": [1, 2, 3, 4] },
+      "WalletTransactionType": { "type": "integer", "enum": [1, 2, 3] },
+      "LoginDto": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": { "type": "string" },
+          "password": { "type": "string" }
+        }
+      },
+      "RegisterAttendeeDto": {
+        "type": "object",
+        "required": ["email", "password", "fullName"],
+        "properties": {
+          "email": { "type": "string" },
+          "password": { "type": "string" },
+          "fullName": { "type": "string" }
+        }
+      },
+      "RegisterOrganizerDto": {
+        "type": "object",
+        "required": ["email", "password", "fullName", "companyName"],
+        "properties": {
+          "email": { "type": "string" },
+          "password": { "type": "string" },
+          "fullName": { "type": "string" },
+          "companyName": { "type": "string" },
+          "taxNumber": { "type": "string", "nullable": true }
+        }
+      },
+      "RefreshTokenRequestDto": {
+        "type": "object",
+        "required": ["refreshToken"],
+        "properties": {
+          "refreshToken": { "type": "string" }
+        }
+      },
+      "AuthResponseDto": {
+        "type": "object",
+        "properties": {
+          "accessToken": { "type": "string" },
+          "refreshToken": { "type": "string" },
+          "refreshTokenExpiresAt": { "type": "string", "format": "date-time" },
+          "userId": { "type": "integer" },
+          "email": { "type": "string" },
+          "fullName": { "type": "string" },
+          "roles": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "CurrentUserDto": {
+        "type": "object",
+        "properties": {
+          "userId": { "type": "integer" },
+          "email": { "type": "string" },
+          "fullName": { "type": "string" },
+          "isActive": { "type": "boolean" },
+          "roles": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "CreateEventDto": {
+        "type": "object",
+        "required": ["title", "venue", "startDate", "endDate"],
+        "properties": {
+          "title": { "type": "string" },
+          "description": { "type": "string", "nullable": true },
+          "venue": { "type": "string" },
+          "startDate": { "type": "string", "format": "date-time" },
+          "endDate": { "type": "string", "format": "date-time" },
+          "cancellationDeadlineHours": { "type": "integer", "default": 48 }
+        }
+      },
+      "UpdateEventDto": {
+        "type": "object",
+        "required": ["title", "venue", "startDate", "endDate", "cancellationDeadlineHours"],
+        "properties": {
+          "title": { "type": "string" },
+          "description": { "type": "string", "nullable": true },
+          "venue": { "type": "string" },
+          "startDate": { "type": "string", "format": "date-time" },
+          "endDate": { "type": "string", "format": "date-time" },
+          "cancellationDeadlineHours": { "type": "integer" }
+        }
+      },
+      "TicketTypeDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "eventId": { "type": "integer" },
+          "name": { "type": "string" },
+          "price": { "type": "number" },
+          "totalQuantity": { "type": "integer" },
+          "remainingQuantity": { "type": "integer" },
+          "maxTicketsPerUser": { "type": "integer" },
+          "saleStartDate": { "type": "string", "format": "date-time" },
+          "saleEndDate": { "type": "string", "format": "date-time" }
+        }
+      },
+      "CreateTicketTypeDto": {
+        "type": "object",
+        "required": ["eventId", "name", "price", "totalQuantity", "saleStartDate", "saleEndDate"],
+        "properties": {
+          "eventId": { "type": "integer" },
+          "name": { "type": "string" },
+          "price": { "type": "number" },
+          "totalQuantity": { "type": "integer" },
+          "maxTicketsPerUser": { "type": "integer", "default": 5 },
+          "saleStartDate": { "type": "string", "format": "date-time" },
+          "saleEndDate": { "type": "string", "format": "date-time" }
+        }
+      },
+      "UpdateTicketTypeDto": {
+        "type": "object",
+        "required": ["name", "price", "totalQuantity", "saleStartDate", "saleEndDate"],
+        "properties": {
+          "name": { "type": "string" },
+          "price": { "type": "number" },
+          "totalQuantity": { "type": "integer" },
+          "maxTicketsPerUser": { "type": "integer", "default": 5 },
+          "saleStartDate": { "type": "string", "format": "date-time" },
+          "saleEndDate": { "type": "string", "format": "date-time" }
+        }
+      },
+      "EventListItemDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "organizerId": { "type": "integer" },
+          "title": { "type": "string" },
+          "venue": { "type": "string" },
+          "startDate": { "type": "string", "format": "date-time" },
+          "endDate": { "type": "string", "format": "date-time" },
+          "status": { "$ref": "#/components/schemas/EventStatus" },
+          "posterDocumentId": { "type": "integer", "nullable": true }
+        }
+      },
+      "EventDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "organizerId": { "type": "integer" },
+          "title": { "type": "string" },
+          "description": { "type": "string", "nullable": true },
+          "venue": { "type": "string" },
+          "startDate": { "type": "string", "format": "date-time" },
+          "endDate": { "type": "string", "format": "date-time" },
+          "cancellationDeadlineHours": { "type": "integer" },
+          "status": { "$ref": "#/components/schemas/EventStatus" },
+          "posterDocumentId": { "type": "integer", "nullable": true },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "ticketTypes": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/TicketTypeDto" }
+          }
+        }
+      },
+      "TicketDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "ticketTypeId": { "type": "integer" },
+          "attendeeId": { "type": "integer" },
+          "uniqueCode": { "type": "string" },
+          "unitPrice": { "type": "number" },
+          "status": { "$ref": "#/components/schemas/TicketStatus" },
+          "purchasedAt": { "type": "string", "format": "date-time", "nullable": true },
+          "checkedInAt": { "type": "string", "format": "date-time", "nullable": true },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "WaitlistDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "eventId": { "type": "integer" },
+          "ticketTypeId": { "type": "integer" },
+          "attendeeId": { "type": "integer" },
+          "status": { "$ref": "#/components/schemas/WaitlistStatus" },
+          "requestedAt": { "type": "string", "format": "date-time" },
+          "notifiedAt": { "type": "string", "format": "date-time", "nullable": true },
+          "expiresAt": { "type": "string", "format": "date-time", "nullable": true }
+        }
+      },
+      "WalletBalanceDto": {
+        "type": "object",
+        "properties": {
+          "attendeeId": { "type": "integer" },
+          "balance": { "type": "number" }
+        }
+      },
+      "DepositDto": {
+        "type": "object",
+        "required": ["amount"],
+        "properties": {
+          "amount": { "type": "number" }
+        }
+      },
+      "WalletTransactionDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "attendeeId": { "type": "integer" },
+          "amount": { "type": "number" },
+          "balanceAfter": { "type": "number" },
+          "type": { "$ref": "#/components/schemas/WalletTransactionType" },
+          "paymentId": { "type": "integer", "nullable": true },
+          "ticketId": { "type": "integer", "nullable": true },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "PaymentDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "ticketId": { "type": "integer" },
+          "attendeeId": { "type": "integer" },
+          "amount": { "type": "number" },
+          "status": { "$ref": "#/components/schemas/PaymentStatus" },
+          "transactionCode": { "type": "string" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "DocumentDto": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "integer" },
+          "uploadedByUserId": { "type": "integer" },
+          "originalFileName": { "type": "string" },
+          "contentType": { "type": "string" },
+          "fileSizeInBytes": { "type": "integer" },
+          "createdAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "OrganizerProfileDto": {
+        "type": "object",
+        "properties": {
+          "userId": { "type": "integer" },
+          "email": { "type": "string" },
+          "fullName": { "type": "string" },
+          "companyName": { "type": "string" },
+          "taxNumber": { "type": "string", "nullable": true },
+          "isApproved": { "type": "boolean" },
+          "approvedAt": { "type": "string", "format": "date-time", "nullable": true }
+        }
+      },
+      "UpdateOrganizerProfileDto": {
+        "type": "object",
+        "required": ["companyName"],
+        "properties": {
+          "companyName": { "type": "string" },
+          "taxNumber": { "type": "string", "nullable": true }
+        }
+      },
+      "GateStaffProfileDto": {
+        "type": "object",
+        "properties": {
+          "userId": { "type": "integer" },
+          "email": { "type": "string" },
+          "fullName": { "type": "string" },
+          "assignedEventId": { "type": "integer", "nullable": true },
+          "assignedEventTitle": { "type": "string", "nullable": true }
+        }
+      },
+      "CheckInTicketDto": {
+        "type": "object",
+        "required": ["uniqueCode"],
+        "properties": {
+          "uniqueCode": { "type": "string" },
+          "deviceLocation": { "type": "string", "nullable": true }
+        }
+      },
+      "CheckInResultDto": {
+        "type": "object",
+        "properties": {
+          "isSuccessful": { "type": "boolean" },
+          "scannedCode": { "type": "string" },
+          "failureReason": { "type": "string", "nullable": true },
+          "ticketId": { "type": "integer", "nullable": true },
+          "checkedInAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "GlobalStatsDto": {
+        "type": "object",
+        "properties": {
+          "totalUsers": { "type": "integer" },
+          "totalEvents": { "type": "integer" },
+          "publishedEvents": { "type": "integer" },
+          "ticketsSold": { "type": "integer" },
+          "totalRevenue": { "type": "number" },
+          "pendingOrganizers": { "type": "integer" }
+        }
+      },
+      "CreateGateStaffDto": {
+        "type": "object",
+        "required": ["email", "password", "fullName"],
+        "properties": {
+          "email": { "type": "string" },
+          "password": { "type": "string" },
+          "fullName": { "type": "string" },
+          "assignedEventId": { "type": "integer", "nullable": true }
+        }
+      },
+      "AssignGateStaffDto": {
+        "type": "object",
+        "required": ["gateStaffUserId", "eventId"],
+        "properties": {
+          "gateStaffUserId": { "type": "integer" },
+          "eventId": { "type": "integer" }
+        }
+      },
+      "PagedEventListItemDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/EventListItemDto" }
+          },
+          "page": { "type": "integer" },
+          "pageSize": { "type": "integer" },
+          "totalCount": { "type": "integer" }
+        }
+      },
+      "PagedTicketDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/TicketDto" }
+          },
+          "page": { "type": "integer" },
+          "pageSize": { "type": "integer" },
+          "totalCount": { "type": "integer" }
+        }
+      },
+      "PagedWaitlistDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/WaitlistDto" }
+          },
+          "page": { "type": "integer" },
+          "pageSize": { "type": "integer" },
+          "totalCount": { "type": "integer" }
+        }
+      },
+      "PagedWalletTransactionDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/WalletTransactionDto" }
+          },
+          "page": { "type": "integer" },
+          "pageSize": { "type": "integer" },
+          "totalCount": { "type": "integer" }
+        }
+      },
+      "PagedPaymentDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/PaymentDto" }
+          },
+          "page": { "type": "integer" },
+          "pageSize": { "type": "integer" },
+          "totalCount": { "type": "integer" }
+        }
+      },
+      "PagedOrganizerProfileDto": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/OrganizerProfileDto" }
+          },
+          "page": { "type": "integer" },
+          "pageSize": { "type": "integer" },
+          "totalCount": { "type": "integer" }
+        }
+      }
+    }
+  },
+  "security": [{ "Bearer": [] }]
+}

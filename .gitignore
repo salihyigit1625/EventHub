@@ -59,3 +59,9 @@ uploads/
 **/appsettings.*.local.json
 *.pfx
 *.p12
+
+# Nuxt / Node
+**/node_modules/
+**/.nuxt/
+**/.output/
+**/.nitro/

@@ -30,8 +30,9 @@ Full white-box assessment and remediation history:
 | Auth | JWT + refresh tokens |
 | Docs | Swagger / OpenAPI |
 | Tests | NUnit |
+| Web | Nuxt 4 + Vue 3 + Pinia (`frontend/`) |
 
-**Projects:** `Api` · `Application` · `Domain` · `Repository` · `Infrastructure` · `Tests`
+**Projects:** `Api` · `Application` · `Domain` · `Repository` · `Infrastructure` · `Tests` · Web (`frontend`)
 
 ---
 
@@ -43,6 +44,7 @@ Full white-box assessment and remediation history:
 docker compose up --build
 ```
 
+- Web: http://localhost:3000  
 - API: http://localhost:8080  
 - Swagger: http://localhost:8080/swagger  
 

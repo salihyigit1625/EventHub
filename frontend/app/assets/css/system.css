@@ -1,0 +1,406 @@
+/* ============================================================
+   Tasarım sistemi katmanı.
+   main.css'ten sonra yüklenir: token'ları tanımlar ve temel
+   bileşenleri (buton, yüzey, kart, tablo) olgunlaştırır.
+   ============================================================ */
+
+:root {
+  /* Ritim: 4px tabanlı ölçek */
+  --s-1: 0.25rem;
+  --s-2: 0.5rem;
+  --s-3: 0.75rem;
+  --s-4: 1rem;
+  --s-5: 1.5rem;
+  --s-6: 2rem;
+  --s-7: 3rem;
+  --s-8: 4.5rem;
+
+  /* Tipografi: akışkan ölçek */
+  --fs-display: clamp(2.6rem, 6.5vw, 4.4rem);
+  --fs-h1: clamp(1.9rem, 3.6vw, 2.7rem);
+  --fs-h2: clamp(1.35rem, 2.2vw, 1.7rem);
+  --fs-h3: 1.15rem;
+  --fs-body: 1rem;
+  --fs-meta: 0.875rem;
+  --fs-micro: 0.75rem;
+
+  --lh-tight: 1.08;
+  --lh-snug: 1.28;
+  --lh-body: 1.6;
+
+  --tracking-label: 0.14em;
+
+  /* Yüzeyler ve çizgiler */
+  --surface-2: #fffdfb;
+  --surface-sunken: rgba(51, 51, 51, 0.035);
+  --hairline: rgba(51, 51, 51, 0.1);
+  --hairline-strong: rgba(51, 51, 51, 0.16);
+  --highlight: rgba(255, 255, 255, 0.7);
+  --ring: rgba(55, 82, 87, 0.38);
+
+  /* Katmanlı gölgeler: tek gölge yerine yakın + uzak */
+  --e-1:
+    0 1px 2px rgba(28, 38, 41, 0.05),
+    0 1px 1px rgba(28, 38, 41, 0.04);
+  --e-2:
+    0 1px 2px rgba(28, 38, 41, 0.05),
+    0 6px 16px -6px rgba(28, 38, 41, 0.12);
+  --e-3:
+    0 1px 2px rgba(28, 38, 41, 0.06),
+    0 12px 28px -10px rgba(28, 38, 41, 0.18);
+  --e-4:
+    0 2px 4px rgba(28, 38, 41, 0.06),
+    0 24px 48px -16px rgba(28, 38, 41, 0.26);
+
+  /* Hareket */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-1: 0.14s;
+  --dur-2: 0.22s;
+  --dur-3: 0.34s;
+
+  --muted: #5f5952;
+  --radius: 16px;
+  --radius-sm: 11px;
+  --radius-lg: 22px;
+  --shadow: var(--e-2);
+}
+
+.theme-dark,
+.shell--kiosk {
+  --surface-2: rgba(255, 255, 255, 0.07);
+  --surface-sunken: rgba(0, 0, 0, 0.22);
+  --hairline: rgba(255, 255, 255, 0.11);
+  --hairline-strong: rgba(255, 255, 255, 0.2);
+  --highlight: rgba(255, 255, 255, 0.14);
+  --ring: rgba(232, 166, 83, 0.6);
+  --e-1: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --e-2: 0 2px 4px rgba(0, 0, 0, 0.3), 0 8px 20px -8px rgba(0, 0, 0, 0.55);
+  --e-3: 0 2px 6px rgba(0, 0, 0, 0.35), 0 16px 36px -12px rgba(0, 0, 0, 0.6);
+  --e-4: 0 4px 10px rgba(0, 0, 0, 0.4), 0 30px 60px -18px rgba(0, 0, 0, 0.7);
+}
+
+/* ——— Tipografi hiyerarşisi ——— */
+body {
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  text-rendering: optimizeLegibility;
+}
+
+h1 {
+  font-size: var(--fs-h1);
+  line-height: var(--lh-tight);
+  letter-spacing: -0.025em;
+}
+
+h2 {
+  font-size: var(--fs-h2);
+  line-height: var(--lh-snug);
+  letter-spacing: -0.02em;
+}
+
+h3 {
+  font-size: var(--fs-h3);
+  line-height: var(--lh-snug);
+  letter-spacing: -0.01em;
+}
+
+.eyebrow {
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tracking-label);
+}
+
+/* Meta veri: tarih, fiyat, kontenjan — gövdeden bir kademe geride */
+.event-card__meta {
+  font-size: var(--fs-meta);
+  line-height: 1.45;
+  color: var(--muted);
+}
+
+/* Sayısal alanlar hizalı okunur */
+.stat strong,
+.kpi__value,
+.session-strip__item strong,
+.tier__price,
+.countdown__num,
+.bars__value {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+::selection {
+  background: rgba(232, 166, 83, 0.35);
+}
+
+/* ——— Odak halkası: klavye kullanıcısı için tutarlı ——— */
+:where(a, button, input, textarea, select, [tabindex]):focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+/* ——— Butonlar ——— */
+.btn {
+  position: relative;
+  font-size: 0.94rem;
+  letter-spacing: -0.005em;
+  transition:
+    transform var(--dur-1) var(--ease-out),
+    background var(--dur-2) ease,
+    border-color var(--dur-2) ease,
+    box-shadow var(--dur-2) ease,
+    color var(--dur-2) ease;
+}
+
+.btn-primary {
+  background: linear-gradient(180deg, #3f5d63, var(--teal));
+  box-shadow: var(--e-1), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.btn-primary:hover {
+  background: linear-gradient(180deg, #47686e, #30494e);
+  box-shadow: var(--e-2), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+
+.btn-accent {
+  background: linear-gradient(180deg, #f0b366, var(--gold));
+  box-shadow: var(--e-1), inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+
+.btn-accent:hover {
+  background: linear-gradient(180deg, #f5bf78, #e09a42);
+  box-shadow: 0 6px 18px -6px rgba(232, 166, 83, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+
+.btn-ghost {
+  border-color: var(--hairline-strong);
+  box-shadow: var(--e-1);
+}
+
+.btn-ghost:hover {
+  border-color: var(--teal);
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.theme-dark .btn-ghost:hover {
+  border-color: rgba(255, 255, 255, 0.34);
+}
+
+.btn-soft:hover {
+  background: #cdbdb2;
+}
+
+.btn:disabled {
+  box-shadow: none;
+}
+
+/* ——— Yüzeyler: üstte ince ışık, altta katmanlı gölge ——— */
+.panel {
+  position: relative;
+  border-color: var(--hairline);
+  box-shadow: var(--e-2);
+  transition: box-shadow var(--dur-3) var(--ease-out), border-color var(--dur-2) ease;
+}
+
+.panel::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 1px;
+  border-radius: inherit;
+  background: linear-gradient(90deg, transparent, var(--highlight), transparent);
+  pointer-events: none;
+}
+
+.notice {
+  border-color: var(--hairline);
+  box-shadow: var(--e-1);
+}
+
+/* ——— Bölüm ritmi ——— */
+.page {
+  padding-block: var(--s-6) var(--s-8);
+}
+
+.section-head {
+  align-items: baseline;
+  margin: var(--s-7) 0 var(--s-4);
+}
+
+.section-head h1,
+.section-head h2 {
+  margin: 0;
+}
+
+.section-head + .rail,
+.section-head + .event-grid {
+  margin-top: calc(var(--s-1) * -1);
+}
+
+/* ——— Kartlar ——— */
+.event-grid {
+  gap: var(--s-5) var(--s-4);
+}
+
+.event-card {
+  border-color: var(--hairline);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--e-2);
+  transition:
+    transform var(--dur-3) var(--ease-out),
+    box-shadow var(--dur-3) var(--ease-out),
+    border-color var(--dur-2) ease;
+}
+
+.event-card:hover {
+  transform: translateY(-6px);
+  border-color: var(--hairline-strong);
+  box-shadow: var(--e-4);
+}
+
+.event-card__media img {
+  transition: transform 0.7s var(--ease-out), filter var(--dur-3) ease;
+}
+
+.event-card:hover .event-card__media img {
+  transform: scale(1.06);
+}
+
+/* ——— Rozetler ——— */
+.badge,
+.pill,
+.status {
+  border: 1px solid transparent;
+  line-height: 1.35;
+}
+
+.pill {
+  border-color: var(--hairline);
+  background: var(--surface-2);
+  box-shadow: var(--e-1);
+}
+
+.theme-dark .pill {
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--ink);
+}
+
+/* ——— Tablolar ——— */
+.table {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface);
+  font-size: var(--fs-micro);
+  letter-spacing: var(--tracking-label);
+  border-bottom: 1px solid var(--hairline-strong);
+}
+
+.theme-dark .table th {
+  background: transparent;
+  backdrop-filter: blur(10px);
+}
+
+.table td {
+  border-bottom: 1px solid var(--hairline);
+  vertical-align: middle;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+/* ——— Form alanları ——— */
+.field > span {
+  font-size: var(--fs-meta);
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.field input,
+.field textarea,
+.field select {
+  box-shadow: var(--e-1);
+  transition: border-color var(--dur-2) ease, box-shadow var(--dur-2) ease;
+}
+
+.field input:hover,
+.field textarea:hover,
+.field select:hover {
+  border-color: var(--hairline-strong);
+}
+
+/* ——— Kaydırma çubuğu ——— */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(55, 82, 87, 0.3) transparent;
+}
+
+.theme-dark * {
+  scrollbar-color: rgba(255, 255, 255, 0.22) transparent;
+}
+
+/* ——— Boş durum ——— */
+.empty-state {
+  display: grid;
+  justify-items: center;
+  gap: var(--s-3);
+  padding: var(--s-7) var(--s-4);
+  text-align: center;
+  border: 1px dashed var(--hairline-strong);
+  border-radius: var(--radius-lg);
+  background: var(--surface-sunken);
+}
+
+.empty-state__icon {
+  display: grid;
+  place-items: center;
+  width: 3.4rem;
+  height: 3.4rem;
+  border-radius: 50%;
+  font-size: 1.5rem;
+  background: var(--surface-2);
+  border: 1px solid var(--hairline);
+  box-shadow: var(--e-2);
+  animation: float-soft 4.5s var(--ease-in-out) infinite;
+}
+
+.empty-state__title {
+  font-family: var(--display);
+  font-size: 1.2rem;
+}
+
+.empty-state__text {
+  margin: 0;
+  max-width: 32ch;
+  color: var(--muted);
+  font-size: var(--fs-meta);
+}
+
+@keyframes float-soft {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+/* ——— Bağlantı altı çizgisi: metin içi linkler ——— */
+.notice a,
+.empty a {
+  text-underline-offset: 3px;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 40%, transparent);
+  transition: text-decoration-color var(--dur-2) ease;
+}
+
+.notice a:hover,
+.empty a:hover {
+  text-decoration-color: currentColor;
+}

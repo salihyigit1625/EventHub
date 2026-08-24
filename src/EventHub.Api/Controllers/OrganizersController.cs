@@ -12,6 +12,16 @@ namespace EventHub.Api.Controllers;
 [Route("api/organizers")]
 public class OrganizersController(IOrganizerService organizerService) : ControllerBase
 {
+    [HttpGet("me")]
+    [Authorize(Roles = AppRoles.Organizer)]
+    [HasPermission(AppPermissions.OrganizersUpdate)]
+    [EnableRateLimiting("organizers-relaxed")]
+    public async Task<ActionResult<OrganizerProfileDto>> GetMyProfile(CancellationToken cancellationToken)
+    {
+        var result = await organizerService.GetMyProfileAsync(cancellationToken);
+        return Ok(result);
+    }
+
     [HttpGet("{userId:int}")]
     [Authorize(Roles = AppRoles.Admin)]
     [HasPermission(AppPermissions.OrganizersView)]
