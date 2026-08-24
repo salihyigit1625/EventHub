@@ -1,0 +1,21 @@
+# Nuxt
+.nuxt
+.output
+.nitro
+.data
+dist
+node_modules
+
+# Env
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+
+# Generated OpenAPI client is committed after first generate:api

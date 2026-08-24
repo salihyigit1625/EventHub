@@ -30,6 +30,14 @@ public class OrganizerService(
         return MapToDto(profile, user);
     }
 
+    public async Task<OrganizerProfileDto> GetMyProfileAsync(CancellationToken cancellationToken = default)
+    {
+        var userId = currentUser.UserId
+            ?? throw new UnauthorizedAccessException("Authentication is required.");
+
+        return await GetProfileAsync(userId, cancellationToken);
+    }
+
     public async Task<OrganizerProfileDto> UpdateProfileAsync(
         UpdateOrganizerProfileDto dto,
         CancellationToken cancellationToken = default)

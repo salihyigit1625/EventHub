@@ -34,6 +34,24 @@ services:
       sqlserver:
         condition: service_healthy
 
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NUXT_PUBLIC_API_BASE: http://localhost:8080
+        NUXT_API_BASE: http://api:8080
+    container_name: eventhub-web
+    ports:
+      - "3000:3000"
+    environment:
+      NUXT_PUBLIC_API_BASE: http://localhost:8080
+      NUXT_API_BASE: http://api:8080
+      HOST: 0.0.0.0
+      PORT: 3000
+    depends_on:
+      - api
+
 volumes:
   eventhub-sql-data:
   eventhub-uploads:

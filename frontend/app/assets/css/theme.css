@@ -1,0 +1,222 @@
+/* ============================================================
+   Rol atmosferleri.
+
+   .theme-dark yalnızca değişkenleri devralır; mevcut bileşenler
+   (panel, field, table, badge, stat) böylece koyu varyantlarını
+   ayrı bir sınıf gerektirmeden üretir.
+   ============================================================ */
+
+.theme-dark {
+  --ink: #f3ede6;
+  --muted: #9d968f;
+  --surface: rgba(255, 255, 255, 0.05);
+  --line: rgba(255, 255, 255, 0.13);
+  --shadow: 0 20px 50px rgba(0, 0, 0, 0.45);
+  color: var(--ink);
+}
+
+.theme-dark .panel {
+  backdrop-filter: blur(18px);
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.03));
+}
+
+.theme-dark .field input,
+.theme-dark .field textarea,
+.theme-dark .field select {
+  background: rgba(0, 0, 0, 0.28);
+  color: var(--ink);
+}
+
+.theme-dark .field input::placeholder,
+.theme-dark .field textarea::placeholder {
+  color: rgba(255, 255, 255, 0.32);
+}
+
+.theme-dark .btn-ghost {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: var(--ink);
+}
+
+.theme-dark .btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.13);
+}
+
+.theme-dark .btn-soft {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--ink);
+}
+
+.theme-dark .stat,
+.theme-dark .ticket-row,
+.theme-dark .notice {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: var(--line);
+}
+
+.theme-dark .notice.ok {
+  background: rgba(61, 154, 106, 0.16);
+  color: #86e0b0;
+}
+
+.theme-dark .notice.error {
+  background: rgba(214, 90, 74, 0.16);
+  color: #ff9c8b;
+}
+
+.theme-dark .badge {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--ink);
+}
+
+.theme-dark .badge-muted {
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--muted);
+}
+
+.theme-dark .empty,
+.theme-dark .site-footer {
+  color: var(--muted);
+}
+
+.theme-dark .site-header {
+  background: rgba(0, 0, 0, 0.42);
+  border-bottom-color: transparent;
+  color: var(--ink);
+}
+
+.theme-dark .site-header--lifted {
+  background: rgba(0, 0, 0, 0.7);
+  border-bottom-color: var(--line);
+  box-shadow: 0 12px 34px -22px rgba(0, 0, 0, 0.9);
+}
+
+.theme-dark .user-chip {
+  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.theme-dark .btn-outline {
+  color: var(--ink);
+  border-color: rgba(255, 255, 255, 0.28);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.theme-dark .btn-outline:hover {
+  border-color: rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.14);
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.08);
+}
+
+.theme-dark .subnav a {
+  color: var(--muted);
+}
+
+/* ——— Attendee: dark luxury ——— */
+.shell--lux {
+  min-height: 100vh;
+  background:
+    radial-gradient(1100px 620px at 82% -10%, rgba(232, 166, 83, 0.22), transparent 60%),
+    radial-gradient(780px 520px at -8% 12%, rgba(195, 147, 125, 0.14), transparent 55%),
+    linear-gradient(180deg, #14100f 0%, #0d0b0b 45%, #100c0a 100%);
+}
+
+.shell--lux .subnav a.router-link-active,
+.shell--lux .subnav--on-dark a.router-link-active {
+  background: var(--gold);
+  color: #1a1208;
+}
+
+/* ——— Organizer: clean SaaS ——— */
+.shell--studio {
+  min-height: 100vh;
+  background:
+    radial-gradient(900px 420px at 100% -10%, rgba(55, 82, 87, 0.12), transparent 55%),
+    linear-gradient(180deg, #f7f9f9 0%, #f2f5f5 100%);
+}
+
+.shell--studio .site-header {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.shell--studio .panel {
+  box-shadow: 0 1px 2px rgba(16, 34, 38, 0.05), 0 8px 24px rgba(16, 34, 38, 0.05);
+  border-radius: 16px;
+}
+
+/* ——— Admin: dense console ——— */
+.shell--console {
+  min-height: 100vh;
+  background:
+    linear-gradient(180deg, #10151a 0%, #141a20 40%, #11161b 100%);
+}
+
+.shell--console .panel {
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.shell--console .subnav a.router-link-active {
+  background: #4c7f8a;
+  color: #04090b;
+}
+
+/* ——— GateStaff: kiosk ——— */
+.shell--kiosk {
+  min-height: 100dvh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #05070a;
+  color: #eafff4;
+  --ink: #eafff4;
+  --muted: #7c8a86;
+  --line: rgba(120, 255, 190, 0.18);
+}
+
+/* ——— Alan başlıkları ——— */
+.area-banner--lux {
+  background:
+    linear-gradient(120deg, rgba(232, 166, 83, 0.16), transparent 60%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), transparent);
+  border-bottom: 1px solid var(--line);
+}
+
+.area-banner--studio {
+  color: var(--ink);
+  background: #fff;
+  border-bottom: 1px solid var(--line);
+}
+
+.area-banner--studio .eyebrow {
+  color: var(--teal);
+}
+
+.area-banner--studio .subnav a {
+  color: var(--muted);
+  border: 1px solid var(--line);
+  background: #fff;
+}
+
+.area-banner--studio .subnav a.router-link-active {
+  background: var(--teal);
+  color: #fff;
+  border-color: transparent;
+}
+
+.area-banner--console {
+  background:
+    linear-gradient(120deg, rgba(76, 127, 138, 0.22), transparent 55%),
+    rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid var(--line);
+  padding: 1.25rem 0 1rem;
+}
+
+/* Etkinlik detayı: sahne ışığı */
+.shell--stage {
+  min-height: 100vh;
+  background:
+    radial-gradient(900px 520px at 50% -12%, rgba(232, 166, 83, 0.2), transparent 62%),
+    linear-gradient(180deg, #120f0e 0%, #0b0a0a 55%);
+}
