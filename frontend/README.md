@@ -1,51 +1,58 @@
 # EventHub Web (Nuxt 4)
 
-Modern etkinlik sitesi: yayınlanan etkinlikleri görüntüle, giriş yapıp bilet al, cüzdan/bekleme listesini yönet. Organizatör ve admin panelleri rol ile açılır.
+Browse published events, sign in to buy tickets, and manage wallet / waitlist. Organizer studio, admin console, and gate check-in open by role.
 
-## Çalıştırma
+## Run
 
-### Docker (önerilen)
+### Docker (recommended)
 
-Repoda:
+From the repo root:
 
 ```bash
 docker compose up --build
 ```
 
-- Web: http://localhost:3000  
-- API: http://localhost:8080  
-- Swagger: http://localhost:8080/swagger  
+| Service | URL |
+|---------|-----|
+| Web | http://localhost:3000 |
+| API | http://localhost:8080 |
+| Swagger | http://localhost:8080/swagger |
 
-### Lokal
+### Local
 
-1. API ayakta olsun (`dotnet run --project src/EventHub.Api` → `http://localhost:5170`).
+1. Start the API (`dotnet run --project src/EventHub.Api` → usually `http://localhost:5170`).
 2. Frontend:
 
 ```bash
 cd frontend
 cp .env.example .env
+# keep NUXT_PUBLIC_API_BASE aligned with your API URL
 npm install
-npm run generate:api   # API açıksa Swagger'dan client üretir
+npm run generate:api   # regenerates client from Swagger when API is up
 npm run dev
 ```
 
 http://localhost:3000
 
-## Kullanım akışı
+## Role flows
 
-| Rol | Ne yapar |
-|---|---|
-| Misafir | Ana sayfada etkinlikleri görür; **Bilet al** → giriş |
-| Katılımcı | Bilet alır / iptal eder, cüzdan yükler, bekleme listesine girer |
-| Organizatör | Etkinlik + afiş + bilet tipi (VIP/Standart…), yayınlar |
-| GateStaff | Check-in ekranından bilet kodunu doğrular |
-| Admin | Organizatör onayı, istatistik, kapı görevlisi |
+| Role | What they do |
+|------|----------------|
+| Guest | Browse events on the home page; sign in / register to buy |
+| Attendee | Buy / cancel tickets, top up wallet, join waitlists |
+| Organizer | Create events + poster + ticket types, publish; update company profile |
+| GateStaff | Validate tickets on the check-in screen (camera or manual code) |
+| Admin | Approve organizers, view stats, assign gate staff |
 
-## Seed hesaplar
+All roles: click the header name chip for **Profile** (`/profile`).
 
-| Rol | E-posta | Şifre |
-|---|---|---|
-| Admin | admin@eventhub.local | Admin123! |
-| Organizer | organizer@eventhub.local | Organizer123! |
-| Attendee | attendee@eventhub.local | Attendee123! |
-| GateStaff | gatestaff@eventhub.local | GateStaff123! |
+## Seed accounts
+
+| Role | Email | Password |
+|------|-------|----------|
+| Admin | `admin@eventhub.local` | `Admin123!` |
+| Organizer | `organizer@eventhub.local` | `Organizer123!` |
+| Attendee | `attendee@eventhub.local` | `Attendee123!` |
+| GateStaff | `gatestaff@eventhub.local` | `GateStaff123!` |
+
+Root overview: [../README.md](../README.md)
